@@ -7,10 +7,10 @@ profile clear
 rng(0);
 
 %% Network parameters
-agentCount = 100;   % Number of agents in the network
+agentCount = 50;   % Number of agents in the network
 dimension  = 2;     % Dimension of the space the agents move in
 range      = 6;     % Range of the radio communication
-steps      = 2000; % Simulation time steps
+steps      = 1000; % Simulation time steps
 
 %% Initialize the network
 Network = IdealNetwork(agentCount, dimension, range);
@@ -37,7 +37,7 @@ for k = 1:steps
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.
     for agent = Agents
-        agent.step()
+        agent.simulate()
     end
     
     % Distribute messages among the agents

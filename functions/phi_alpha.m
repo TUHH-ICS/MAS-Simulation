@@ -1,4 +1,6 @@
 function alpha = phi_alpha(z, ra, da, h)
+%PHI_ALPHA Defines the virtual potential field needed for the flocking
+%protocol introduced in Olfati-Saber, 2006.
 
 %% Calculate phi
 a     = 5;
