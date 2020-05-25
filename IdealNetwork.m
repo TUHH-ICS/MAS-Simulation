@@ -21,12 +21,12 @@ classdef IdealNetwork < BaseNetwork
             
             obj.range        = range;
             obj.positions    = zeros(dim, agentCount);
-            obj.recvMessages = cell(agentCount, 1);
-            obj.sendMessages = [];
+            obj.recvMessages = cell(agentCount,1);
+            obj.sendMessages = MessageBuffer(agentCount);
         end
                 
         function send(obj, agent, data)
-            obj.sendMessages = [ obj.sendMessages, Message(agent.id, data) ];
+            obj.sendMessages.put(Message(agent.id, data));
         end
         
         function messages = receive(obj, agent)
@@ -39,7 +39,7 @@ classdef IdealNetwork < BaseNetwork
         end
         
         function process(obj)          
-            for msg = obj.sendMessages
+            for msg = obj.sendMessages.getAll()
                 % Calculate the distance from the sender to all agents
                 dist = vecnorm(obj.positions(:, msg.sender) - obj.positions);
                 
@@ -55,7 +55,7 @@ classdef IdealNetwork < BaseNetwork
                 end
             end
             
-            obj.sendMessages = [];
+            obj.sendMessages.clear();
         end
     end
 end

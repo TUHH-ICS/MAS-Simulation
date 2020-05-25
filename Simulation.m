@@ -3,10 +3,8 @@ clear
 profile clear
 
 % Seed the pseudo random number generator. This is required if we want
-% reproducible simulation, e. g. for profiling the code. Additionally, set
-% to SIMD Mersenne Twister, which should be two times faster than the
-% default PRNG.
-rng(0, 'simdTwister');
+% reproducible simulation, e. g. for profiling the code.
+rng(0);
 
 %% Network parameters
 agentCount = 100;   % Number of agents in the network
