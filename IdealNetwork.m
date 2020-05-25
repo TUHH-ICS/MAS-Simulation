@@ -1,102 +1,61 @@
 classdef IdealNetwork < BaseNetwork
     %IDEALNETWORK Summary of this class goes here
     %   Detailed explanation goes here
-        
+    
     properties(GetAccess = public, SetAccess = immutable)
-        Range
+        range
     end
     
     properties(GetAccess = public, SetAccess = private)
-        AgentPositions
-        SendMessages
-        RecvMessages
-    end
-    
-    properties(Dependent, GetAccess = public, SetAccess = private)
-        NumAgents
+        positions    % Positions of all agents in the network
+        sendMessages % Messages waiting to be processed in the network
+        recvMessages % Messages that were passed to the recipients
     end
     
     methods
         function obj = IdealNetwork(agentCount, dim, range)
             %IDEALNETWORK Construct an instance of this class
             %   Detailed explanation goes here
-
+            
             obj@BaseNetwork(agentCount);
             
-            obj.Range          = range;
-            obj.AgentPositions = zeros(dim, agentCount);
-            obj.RecvMessages   = cell(agentCount, 1);
-            obj.SendMessages   = [];
-        end
-        
-        function value = get.NumAgents(obj)
-            value = size(obj.Agents, 2);
+            obj.range        = range;
+            obj.positions    = zeros(dim, agentCount);
+            obj.recvMessages = cell(agentCount, 1);
+            obj.sendMessages = [];
         end
                 
         function send(obj, agent, data)
-            obj.SendMessages = [ obj.SendMessages, Message(agent.Id, data) ];
+            obj.sendMessages = [ obj.sendMessages, Message(agent.id, data) ];
         end
         
         function messages = receive(obj, agent)
-            messages = obj.RecvMessages{agent.Id};
-            obj.RecvMessages{agent.Id} = [];
+            messages = obj.recvMessages{agent.id};
+            obj.recvMessages{agent.id} = [];
         end
         
         function setPosition(obj, agent)
-            obj.AgentPositions(:, agent.Id) = agent.position;
+            obj.positions(:, agent.id) = agent.position;
         end
         
-        function process(obj)
-            filter = zeros(obj.NumAgents);
-            
-            for msg = obj.SendMessages
-                % Enumerate all possible targets
-                idx = 1:obj.NumAgents;
+        function process(obj)          
+            for msg = obj.sendMessages
+                % Calculate the distance from the sender to all agents
+                dist = vecnorm(obj.positions(:, msg.sender) - obj.positions);
                 
-                % Remove sender from list
-                idx(idx == msg.Sender) = [];
+                % Enumerate all targets inside the receiving range
+                idx = find(dist <= obj.range);
+                
+                % The sender does not receive its own message, so remove it
+                % from the list.
+                idx(idx == msg.sender) = [];
                 
                 for id = idx
-                    received = false;
-                    
-                    % We make the assumption that the connection is
-                    % symmetric. Therefore we only need to test half the
-                    % time.
-                    [a, b] = asc(msg.Sender, id);
-                    
-                    if filter(a,b) == 1 % Agent in range
-                        received = true;
-                    elseif filter(a,b) == 0 % Agent not yet tested
-                        sendPos = obj.AgentPositions(:, msg.Sender);
-                        recvPos = obj.AgentPositions(:, id);
-                        
-                        if norm(sendPos - recvPos) <= range
-                            filter(a,b) = 1;
-                            received    = true;
-                        else
-                            filter(a,b) = -1;
-                        end
-                    end
-                    
-                    % Message successfully received
-                    if received
-                        obj.RecvMessage{id} = [ obj.RecvMessage{id}, msg ];
-                    end
+                    obj.recvMessages{id} = [ obj.recvMessages{id}, msg ];
                 end
             end
             
-            obj.SendMessages = [];
+            obj.sendMessages = [];
         end
-    end
-end
-
-function [a, b] = asc(x, y)
-%ASC Sorts the two arguments in ascending order
-    if x > y
-        a = y;
-        b = x;
-    else
-        a = x;
-        b = y;
     end
 end

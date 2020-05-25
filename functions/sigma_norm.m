@@ -1,5 +1,7 @@
-function y = sigma_norm(z, epsilon)
+function [y, gradient] = sigma_norm(z, epsilon)
 %SIGMA_NORM This is not really a norm. But useful anyways.
 %Differentiable at 0.
-y  = 1/epsilon * (sqrt(1 + epsilon * norm(z)^2) - 1);
+normed   = sqrt(1 + epsilon * norm(z)^2);
+y        = (normed - 1) / epsilon;
+gradient = z / normed;
 end

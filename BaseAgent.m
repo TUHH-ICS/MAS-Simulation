@@ -4,6 +4,7 @@ classdef(Abstract) BaseAgent < handle
     
     properties(GetAccess = public, SetAccess = protected)
         x
+        messages
     end
         
     properties(GetAccess = public, SetAccess = immutable)
@@ -40,9 +41,18 @@ classdef(Abstract) BaseAgent < handle
     
     methods(Sealed)
         function step(obj)
+            obj.messages = [ obj.messages, obj.network.receive(obj) ];
             obj.move()
-            
-            obj.network.setPosition(obj.position);
+            obj.network.setPosition(obj);
+        end
+    end
+    
+    methods(Sealed, Access = protected)
+        function send(obj)
+            data = struct;
+            data.position = obj.position;
+            data.velocity = obj.velocity;
+            obj.network.send(obj, data)
         end
     end
     

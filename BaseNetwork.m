@@ -6,12 +6,8 @@ classdef(Abstract) BaseNetwork < handle
         idCounter
     end
     
-    properties(Access = private)
+    properties(GetAccess = public, SetAccess = immutable)
         agentCount
-    end
-    
-    properties(Abstract, Dependent, GetAccess = public, SetAccess = private)
-        NumAgents
     end
     
     methods

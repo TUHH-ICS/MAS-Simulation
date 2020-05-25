@@ -3,16 +3,22 @@ classdef Message
     %   Detailed explanation goes here
     
     properties(GetAccess = public, SetAccess = immutable)
-        Sender
-        Data
+        sender
+        data
     end
     
     methods
-        function obj = Message(Sender, Data)
+        function obj = Message(sender, data)
             %MESSAGE Construct an instance of this class
             %   Detailed explanation goes here
-            obj.Sender = Sender;
-            obj.Data   = Data;
+            
+            if nargin >= 2
+                obj.sender = sender;
+                obj.data   = data;
+            else
+                obj.sender = -1;
+                obj.data   = [];
+            end
         end
     end
 end
