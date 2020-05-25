@@ -21,8 +21,15 @@ Network = IdealNetwork(agentCount, dimension, range);
 % and later convert this to a standard Matlab array.
 Agents  = cell(agentCount, 1);
 for i = 1:length(Agents)
+    % Randomly place the agents in the square [0,100]^2
     pos = 50 + 100 * (rand(dimension, 1) - 0.5);
+    
+    % Point the agents to the center of the square at the start. In this
+    % way, the agents will not fragment into multiple groups. This is not
+    % required if a gamma agent would be included
     vel = 0.01 * ([ 50; 50 ] - pos);
+    
+    % Initiallize an agent with the generated initial conditions
     Agents{i} = FlockingAgent(Network, pos, vel);
 end
 Agents  = [Agents{:}];
