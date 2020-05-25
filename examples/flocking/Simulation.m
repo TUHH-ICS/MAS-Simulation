@@ -1,3 +1,4 @@
+addpath(genpath('../../lib'))
 addpath(genpath('.'))
 clear
 profile clear
@@ -31,7 +32,7 @@ pos_history = zeros(steps+1, dimension, agentCount);
 pos_history(1,:,:) = [Agents.position];
 
 tic
-profile on
+% profile on
 for k = 1:steps
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
@@ -51,7 +52,7 @@ for k = 1:steps
         fprintf('Simulation %3.5g%% finished\n', 100*k/steps)
     end
 end
-profile viewer
+% profile viewer
 toc
 
 %% Animate simulation results
