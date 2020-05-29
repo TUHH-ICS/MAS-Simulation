@@ -1,6 +1,10 @@
 addpath(genpath('../../lib'))
-addpath(genpath('.'))
+addpath('functions')
+
+% Clear workspace to increase repeatability
 clear
+
+% Reset the Matlab profiler
 profile clear
 
 % Seed the pseudo random number generator. This is required if we want
@@ -9,12 +13,14 @@ rng(0);
 
 %% Network parameters
 agentCount = 50;   % Number of agents in the network
-dimension  = 2;     % Dimension of the space the agents move in
-range      = 6;     % Range of the radio communication
+dimension  = 2;    % Dimension of the space the agents move in
+range      = 6;    % Range of the radio communication
+pTransmit  = 0.95; % Probability of successful transmission
 steps      = 1000; % Simulation time steps
 
 %% Initialize the network
-Network = IdealNetwork(agentCount, dimension, range);
+% Network = IdealNetwork(agentCount, dimension, range);
+Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents

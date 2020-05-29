@@ -6,20 +6,20 @@ The base of this simulation tool are the `BaseAgent` and `BaseNetwork` classes, 
 These abstract classes specify the interface that is used to drive the simulation but cannot be used for simulation themselves.
 To perform a simulation, you must define a set of classes that inherit from `BaseAgent` and `BaseNetwork`.
 
-Currently the project containts only one such implementation, `IdealNetwork`.
-It is a very simple network implementation that does not consider any non-ideal network properties and broadcasts the messages over a finite range.
-For a high simulation speed, it is important to select the communication range appropriatly, as interactions between agents should be minimized.
+Currently the project contains two such implementations, `IdealNetwork` and `BernoulliNetwork`.
+The former implements an ideal network without paket loss but a finite transmission range, the latter additionally models paket loss using a Bernoulli distribution.
+For a high simulation speed, it is important to select the transmission range appropriatly, as interactions between agents should be minimized.
 Selecting the range to large can drastically decrease the simulation performance by introducing quadratic scaling in the number of agents.
 
-At the moment, there is no such conveniency class implementing `BaseAgent` but at least an `LtiAgent` and probably also an `LpvAgent` should be added after some design work.
-Further work is also required to consider *time-triggered* and *event-triggered* control.
+At the moment, there is no such conveniency class implementing `BaseAgent` but at least an `LtiAgent` class and probably also an `LpvAgent` class should be added following some design work.
+Further work is also required to consider both *time-triggered* and *event-triggered* control.
 
 ## Usage
 
-There a three main steps to implementing a new simulation within this project.
+There a three main steps to implementing a simulation within this project.
 
 1. Implement a suitable networking class by extending `BaseNetwork`.
-   For most cases, the network implementations provided by the project should suffice, so check these first before implementing you own.
+   For most cases, the network implementations provided by the project should suffice, so check these first before implementing your own.
 2. Implement the desired agent behaviour by extending `BaseAgent`.
    The main work is in implementing the `step()` function that calculates a single discrete timestep for the agent and some minor work is in defining the projections `position` and `velocity`.
    For an example, see `FlockingAgent` in `examples/flocking`.
