@@ -1,4 +1,4 @@
-classdef(Abstract) BaseAgent < handle
+classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     %BASEAGENT Defines the basic properties of a agent in the simulation
     %framework.
     %   All specific agent classes must inherit from this abstract class,
@@ -37,8 +37,12 @@ classdef(Abstract) BaseAgent < handle
             %   x0 is the initial state of the agent.
             
             obj.network = network;
-            obj.id      = network.getId(); % Aquire unique id
             obj.x       = x0;
+            
+            % Test if a correct network implementation was handed in
+            if isa(network, 'BaseNetwork')
+                obj.id  = network.getId(); % Aquire unique id
+            end
         end
         
         function value = get.nx(obj)
@@ -77,12 +81,20 @@ classdef(Abstract) BaseAgent < handle
             messages = obj.network.receive(obj);
         end
     end
-    
+        
     methods(Abstract, Access = protected)
         % The STEP function needs to be implemented for each specific agent
         % behaviour. It should update the state of the agent and handle all
         % network interaction
         step(obj)
+    end
+    
+    methods (Static, Sealed, Access = protected)
+        function default_object = getDefaultScalarElement()
+            %GETDEFAULTSCALARELEMENT Provides a default element for Matlab
+            %to place in newly created arrays of BaseAgents.
+            default_object = StationaryAgent;
+        end
     end
 end
 

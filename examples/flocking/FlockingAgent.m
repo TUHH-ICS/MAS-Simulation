@@ -19,7 +19,8 @@ classdef FlockingAgent < BaseAgent
     methods     
         function obj = FlockingAgent(network, initialPos, initialVel)
             %FLOCKINGAGENT Construct an instance of this class
-            %   Detailed explanation goes here
+            %   Initializes the state space to the given initial position
+            %   and velocity.
             
             x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
             obj@BaseAgent(network, x0);
