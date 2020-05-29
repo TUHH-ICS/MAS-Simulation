@@ -17,13 +17,13 @@ classdef FlockingAgent < BaseAgent
     end
     
     methods     
-        function obj = FlockingAgent(network, initialPos, initialVel)
+        function obj = FlockingAgent(network, dT, initialPos, initialVel)
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
             
             x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
-            obj@BaseAgent(network, x0);
+            obj@BaseAgent(network, dT, x0);
         end
         
         function value = get.position(obj)
@@ -41,16 +41,8 @@ classdef FlockingAgent < BaseAgent
             %   of the agents into the velocity space.
             value = [obj.x(2); obj.x(4)];
         end
-    end
-    
-    methods(Access = protected)
+
         function step(obj)
-            % TODO The step size should not be a local constant in the
-            % agent implementation, but set centrally in the simulation
-            % framework. This needs some form of design work, because we
-            % want to support time triggered and event triggered control.
-            T = 0.1;
-            
             % Receive messages from the network
             messages = obj.receive();
             
@@ -73,16 +65,19 @@ classdef FlockingAgent < BaseAgent
             end
             
             % Implement double integrator dynamics
-            obj.x(1) = obj.x(1) + T*obj.x(2);
-            obj.x(2) = obj.x(2) + T*u(1);
-            obj.x(3) = obj.x(3) + T*obj.x(4);
-            obj.x(4) = obj.x(4) + T*u(2);
+            obj.x(1) = obj.x(1) + obj.dT * obj.x(2);
+            obj.x(2) = obj.x(2) + obj.dT * u(1);
+            obj.x(3) = obj.x(3) + obj.dT * obj.x(4);
+            obj.x(4) = obj.x(4) + obj.dT * u(2);
             
             % Send message to network, include position and velocity
             data = struct;
             data.position = obj.position;
             data.velocity = obj.velocity;
             obj.send(data)
+            
+            % Execute BaseAgent step
+            obj.step@BaseAgent()
         end
     end
 end

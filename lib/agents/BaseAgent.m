@@ -8,9 +8,14 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     properties(GetAccess = public, SetAccess = protected)
         x        % Dynamic state of the agent
     end
-        
+    
+    properties(GetAccess = public, SetAccess = private)
+        t        % Current simulation time
+    end
+    
     properties(GetAccess = public, SetAccess = immutable)
         id       % Number that uniquely identifies the agent in the network
+        dT       % Time between to calls to the step function
     end
     
     properties(GetAccess = private, SetAccess = immutable)
@@ -31,12 +36,14 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     end
     
     methods
-        function obj = BaseAgent(network, x0)
+        function obj = BaseAgent(network, dT, x0)
             %BASEAGENT Construct an instance of this class
             %   network is a reference to the network object.
             %   x0 is the initial state of the agent.
             
             obj.network = network;
+            obj.t       = 0;
+            obj.dT      = dT;
             obj.x       = x0;
             
             % Test if a correct network implementation was handed in
@@ -49,22 +56,22 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
             %GET.NX Implementation of the dependent property nx
             value = size(obj.x, 1);
         end
-    end
-    
-    methods(Sealed)
-        function simulate(obj)
-            %SIMULATE Function that gets called at every timestep in the
-            %simulation.
-            %   This function moves the agent one step ahead in time. The
-            %   dynamic equations get evaluated and the messages get
-            %   processed.
-            
-            % Call implementation specific code
-            obj.step()
+        
+        function step(obj)
+            %STEP Function that gets called at each simulation step
+            %   All agent implementations should override this method to
+            %   implement agent specific behaviour, such as the dynamics
+            %   and the network interactions.
+            %   
+            %   You should call the superclass method at the end of your
+            %   custom implementation
             
             % Update agent position in the network. This is independent of
             % sending a message that may contain the agent position.
             obj.network.setPosition(obj);
+            
+            % Update current simulation time
+            obj.t = obj.t + obj.dT;
         end
     end
     
@@ -80,13 +87,6 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
             %messages from other agents in the network
             messages = obj.network.receive(obj);
         end
-    end
-        
-    methods(Abstract, Access = protected)
-        % The STEP function needs to be implemented for each specific agent
-        % behaviour. It should update the state of the agent and handle all
-        % network interaction
-        step(obj)
     end
     
     methods (Static, Sealed, Access = protected)

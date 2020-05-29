@@ -14,6 +14,7 @@ rng(0);
 %% Network parameters
 agentCount = 50;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
+dT         = 0.1;  % Size of the simulation time steps
 range      = 6;    % Range of the radio communication
 pTransmit  = 0.95; % Probability of successful transmission
 steps      = 1000; % Simulation time steps
@@ -36,7 +37,7 @@ for i = 1:length(Agents)
     vel = 0.01 * ([ 50; 50 ] - pos);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent(Network, pos, vel);
+    Agents{i} = FlockingAgent(Network, dT, pos, vel);
 end
 Agents  = [Agents{:}];
 
@@ -51,7 +52,7 @@ for k = 1:steps
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.
     for agent = Agents
-        agent.simulate()
+        agent.step()
     end
     
     % Distribute messages among the agents

@@ -11,7 +11,7 @@ classdef StationaryAgent < BaseAgent
     end
     
     methods     
-        function obj = StationaryAgent(network, initialPos)
+        function obj = StationaryAgent(network, dT, initialPos)
             %STATIONARYAGENT Construct an instance of this class
             
             % In case the constructor is called without arguments, provide
@@ -21,10 +21,13 @@ classdef StationaryAgent < BaseAgent
                 network = [];
             end
             if nargin <= 1
+                dT = -1;
+            end
+            if nargin <= 2
                 initialPos = 0;
             end
             
-            obj@BaseAgent(network, initialPos);
+            obj@BaseAgent(network, dT, initialPos);
         end
         
         function value = get.position(obj)
@@ -40,12 +43,13 @@ classdef StationaryAgent < BaseAgent
             %   As this agent is stationary, the velocity is always 0.
             value = zeros(size(obj.x));
         end
-    end
-    
-    methods(Access = protected)
+        
         function step(obj)
             % Drop received messages
             obj.network.receive();
+            
+            % Execute BaseAgent step
+            obj.step@BaseAgent()
         end
     end
 end
