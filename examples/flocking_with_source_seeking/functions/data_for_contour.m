@@ -1,17 +1,27 @@
-function [X,Y,Z]=data_for_contour(lim,source_seek_params)
+function [X,Y,Z]=data_for_contour(lim,inv_gauss_field)
 % This function creates mesh grid data for plotting contours based on the
 % underlying source field
 % Sum of Inverted Gaussians
-no_minima=source_seek_params.invt_gauss_no_minima;
+no_minima=inv_gauss_field.no_centers;
+d=inv_gauss_field.dim;
 XX = lim(1,1):1:lim(1,2);
-YY = lim(2,1):1:lim(1,2);    
-[X,Y] = meshgrid(XX,YY);
+YY = lim(2,1):1:lim(2,2);    
+[X,Y] = meshgrid(XX,YY); 
 Z=zeros(size(X));
 for i=1:no_minima
-    source=source_seek_params.invt_gauss_center_m(:,i);
-    var=source_seek_params.invt_gauss_var_m(:,i);
-    scale=source_seek_params.invt_gauss_scale_m(:,i);
-    Z = Z +scale*exp(-((X-source(1)).^2+(Y-source(2)).^2)/var);
-end 
+    Source_i=inv_gauss_field.centers(:,i);
+    Sigma_i=inv_gauss_field.Sigmas(1:d,(i-1)*d+1:i*d);
+    scale_i=inv_gauss_field.scales(i);
+    Ex=[XX-Source_i(1)];
+    Ey=[YY-Source_i(2)];
+    Z_temp=zeros(size(X));
+    for m=1:size(YY,2)
+        for n=1:size(XX,2)
+            e=[Ex(n);Ey(m)];
+            Z_temp(m,n)=scale_i*exp(-0.5*e'*inv(Sigma_i)*e);
+        end
+    end
+    Z=Z+Z_temp;
+    end 
 
 end

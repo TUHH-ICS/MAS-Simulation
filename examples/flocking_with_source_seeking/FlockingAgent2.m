@@ -10,8 +10,8 @@ classdef FlockingAgent2 < BaseAgent
         ra              = 1.2 * FlockingAgent2.da; % Sensing radius (no interaction with agents outside ra disc)
         h               = 0.9; % Bump function goes to zero after h
         c_damp          = 3;   % Damping between agents / alignment rule
-        c_self_damp     = 3;   % Damping between agents and environment (e.g Viscocity)
-        c_gradient      = 0.5; % constant multiplying the gradient force
+        c_self_damp     = 1;   % Damping between agents and environment (e.g Viscocity)
+        c_gradient      = 1; % constant multiplying the gradient force
     end
     
     properties(Dependent, GetAccess = public, SetAccess = private)
@@ -21,15 +21,19 @@ classdef FlockingAgent2 < BaseAgent
     properties(GetAccess = public, SetAccess = protected)       
         gradient % gradient of the field at the position of agent
     end
+    properties(GetAccess = private, SetAccess = immutable)
+        field  % Pointer to the network object, for sending and receiving
+    end
     
     methods     
-        function obj = FlockingAgent2(network, dT, initialPos, initialVel)
+        function obj = FlockingAgent2(network, dT, initialPos, initialVel, field)
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
             
             x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
             obj@BaseAgent(network, dT, x0);
+            obj.field=field;
         end        
         
         function value = get.position(obj)
@@ -48,7 +52,7 @@ classdef FlockingAgent2 < BaseAgent
             value = [obj.x(2); obj.x(4)];
         end
         
-        function grad = get_gradient_est(obj,grad)
+        function [] = get_gradient_est(obj)
             %get_gradient_est
             % This function estimates the gradient of the field at the
             % current agent location. In the current implementation, we
@@ -57,7 +61,7 @@ classdef FlockingAgent2 < BaseAgent
             % Next step should be to querry a data set (say 10 points) near
             % the current agent location and solve a LS problem to estimate
             % the gradient.
-            
+            grad=obj.field.get_true_gradient(obj.position);            
             obj.gradient=grad+norm(grad)*0.1*(-0.5+rand(size(grad,1),1));
         end
         
@@ -86,11 +90,14 @@ classdef FlockingAgent2 < BaseAgent
             end
             
             % Calculate force on the agent from the source field
+            obj.get_gradient_est();
             u = u -  obj.c_gradient*obj.gradient; 
             
             
             % Self_damping
-            u = u - FlockingAgent2.c_damp*obj.velocity; 
+            u = u - FlockingAgent2.c_self_damp*obj.velocity; 
+            
+            
             
             % Implement double integrator dynamics
             obj.x(1) = obj.x(1) + obj.dT * obj.x(2);

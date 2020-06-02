@@ -2,6 +2,7 @@ addpath(genpath('../../lib'))
 addpath('functions')
 
 % Clear workspace to increase repeatability
+clc
 clear
 
 % Reset the Matlab profiler
@@ -12,16 +13,22 @@ profile clear
 rng(0);
 
 %% Network parameters
-agentCount = 50;   % Number of agents in the network
+agentCount = 25;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.1;  % Size of the simulation time steps
+dT         = 0.05;  % Size of the simulation time steps
 range      = 7*1.2;% Range of the radio communication
 pTransmit  = 1;    % Probability of successful transmission
-steps      = 1000; % Simulation time steps
+steps      = 500; % Simulation time steps
 
-%% Source seeking parameters
-source_seek_params=source_seeking_parameters();
-field=field_inv_gaussians(source_seek_params);
+%% Field parameters
+no_centers=11;
+fcenter=50;
+frange=100;
+fvar=1e2;
+fscale=50;
+% Initialize the field
+Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
+
 %% Initialize the network
 % Network = IdealNetwork(agentCount, dimension, range);
 Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
@@ -34,10 +41,10 @@ for i = 1:length(Agents)
     % Randomly place the agents in the square [0,100]^2
     pos = 50 + 100 * (rand(dimension, 1) - 0.5);
     % Randomly assign the agent velocites in [-5,5]^2
-    vel = 10 * (rand(dimension, 1) - 0.5);
+    vel = 1 * (rand(dimension, 1) - 0.5);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent2(Network, dT, pos, vel);
+    Agents{i} = FlockingAgent2(Network, dT, pos, vel,Field);
 end
 Agents  = [Agents{:}];
 
@@ -51,9 +58,7 @@ for k = 1:steps
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.    
-    for agent = Agents
-        grad_true=field.get_true_gradient(agent.position);
-        agent.get_gradient_est(grad_true);
+    for agent = Agents        
         agent.step()
     end
     
@@ -79,7 +84,7 @@ x_pos = squeeze(pos_history(:,1,:));
 y_pos = squeeze(pos_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 lim=[bounds(x_pos);bounds(y_pos)];
-[X,Y,Z]=data_for_contour(lim,source_seek_params);
+[X,Y,Z]=data_for_contour(lim,Field);
 for k = 1:steps+1
     contour(X,Y,Z)
     hold on
