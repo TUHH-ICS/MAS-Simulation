@@ -12,6 +12,10 @@ classdef MessageBuffer < handle
         nElements % Number of messages that are currently in the buffer
     end
     
+    properties(Dependent, GetAccess = public, SetAccess = private)
+        capacity  % Number of messages that can currently be stored
+    end
+    
     properties(Access = protected)
         buffer    % Backing storage for the buffer
     end
@@ -35,23 +39,33 @@ classdef MessageBuffer < handle
             obj.nElements    = 0;
         end
         
-        function put(obj, message)
-            %PUT Append a single message to the buffer.
-            %   This adds a single message onto the message buffer. If
-            %   there is not enough space for an additional message, the
-            %   internally allocated space is automatically extended.
+        function value = get.capacity(obj)
+            %GET.CAPACITY Implementation of the dependent property capacity
+            value = length(obj.buffer);
+        end
+        
+        function put(obj, messages)
+            %PUT Append messages to the buffer.
+            %   This adds messages onto the message buffer. If there is not
+            %   enough storage space for all additionall messages, the
+            %   internally allocated buffer is automatically extended.
+            
+            % Compute capacity. Using obj.capacity is slower
+            cap = length(obj.buffer); 
             
             % Check if the capacity suffices for storing another message
-            cap = length(obj.buffer);
-            if obj.nElements >= cap
-                % If not, allocate more storage space
-                buf(floor(cap/2)) = Message;
-                obj.buffer        = [ obj.buffer, buf ];
+            required = obj.nElements + length(messages);
+            if required > cap
+                % Calculate how much extra space is needed
+                alloc   = max(floor(cap/2), required - cap);
+                
+                % Allocate new storage space
+                obj.buffer(end + alloc) = Message;
             end
             
-            % Store the message in the first unused slot
-            obj.nElements             = obj.nElements + 1;
-            obj.buffer(obj.nElements) = message;
+            % Store the messages in the first unused slots
+            obj.buffer(obj.nElements+1:required) = messages;
+            obj.nElements = required;
         end
         
         function messages = getAll(obj)
@@ -62,8 +76,8 @@ classdef MessageBuffer < handle
         function messages = takeAll(obj)
             %TAKEALL Returns all messages that are currently in the buffer
             %and removes them from the buffer afterwards.
-            messages = obj.getAll();
-            obj.clear();
+            messages = obj.buffer(1:obj.nElements);
+            obj.nElements = 0;
         end
         
         function clear(obj)
