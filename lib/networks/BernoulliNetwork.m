@@ -33,29 +33,31 @@ classdef BernoulliNetwork < MatlabNetwork
             %   The messages get broadcasted to all agents in the receiving
             %   range.
             
-            for msg = obj.sendMessages.getAll()
+            messages = obj.sendMessages.getAll();
+            
+            % Exclude the possibility of agents sending to themselves
+            filter = ~eye(length(messages), obj.agentCount, 'logical');
+            
+            % Compute the recipients of each message
+            for i = 1:length(messages)
+                pos_sender = obj.positions(:, messages(i).sender);
+                
                 % Calculate the distance from the sender to all agents
-                dist = vecnorm(obj.positions(:, msg.sender) - obj.positions);
+                dist = vecnorm(pos_sender - obj.positions);
                 
-                % Generate random numbers to determine if the message was
-                % transmitted successfully to each possible recepient
-                pTransmit = rand(size(dist));
-                
-                % Enumerate all targets that are inside the receiving range
-                % and additionally the transmission succeeded
-                idx = find((dist <= obj.range) & (pTransmit <= obj.p));
-                
-                % The sender does not receive its own message, so remove it
-                % from the list
-                idx(idx == msg.sender) = [];
-                
-                % Copy the message in all remaining receive buffers
-                for id = idx
-                    obj.recvMessages{id} = [ obj.recvMessages{id}, msg ];
-                end
+                % Remove receivers that are outside the transmission range
+                filter(i,:) = filter(i,:) & (dist <= obj.range);
             end
             
-            % All sent messages were process, so clear the queue
+            % Drop messages randomly -> Bernoulli distribution
+            filter = filter & (rand(size(filter)) <= obj.p);
+            
+            % Copy all received messages in the receiving buffers
+            for i = 1:obj.agentCount
+                obj.recvMessages{i} = [ obj.recvMessages{i}, messages(filter(:,i)) ];
+            end
+            
+            % All sent messages were processed, so clear the queue
             obj.sendMessages.clear();
         end
     end
