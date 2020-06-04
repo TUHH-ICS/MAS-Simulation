@@ -11,6 +11,9 @@ profile clear
 % reproducible simulation, e. g. for profiling the code.
 rng(0);
 
+% Flag to enable exporting a video from the simulation results
+saveVideo = false;
+
 %% Network parameters
 agentCount = 50;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
@@ -26,7 +29,7 @@ Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
 % and later convert this to a standard Matlab array.
-Agents  = cell(agentCount, 1);
+Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
     % Randomly place the agents in the square [0,100]^2
     pos = 50 + 100 * (rand(dimension, 1) - 0.5);
@@ -39,7 +42,7 @@ for i = 1:length(Agents)
     % Initiallize an agent with the generated initial conditions
     Agents{i} = FlockingAgent(Network, dT, pos, vel);
 end
-Agents  = [Agents{:}];
+Agents = [Agents{:}];
 
 %% Perform simulation
 pos_history = zeros(steps+1, dimension, agentCount);
@@ -73,14 +76,35 @@ toc
 figure()
 
 % Compute boundary
-x_pos = squeeze(pos_history(:,1,:));
-y_pos = squeeze(pos_history(:,2,:));
+x_pos  = squeeze(pos_history(:,1,:));
+y_pos  = squeeze(pos_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
+
+% Open video file with mp4 encoding
+if saveVideo
+    video = VideoWriter('flocking', 'MPEG-4');
+    video.FrameRate = 50;
+    open(video)
+else
+    video = [];
+end
 
 for k = 1:steps+1
     pos = squeeze(pos_history(k,:,:));
     scatter(pos(1,:), pos(2,:))
-    xlim(bounds(x_pos));
-    ylim(bounds(y_pos));
+    
+    xlim(bounds(x_pos))
+    ylim(bounds(y_pos))
     drawnow limitrate
+    
+    if ~isempty(video)
+        % Save figure as video frame
+        frame = getframe(gcf);
+        writeVideo(video, frame);
+    end
+end
+
+if ~isempty(video)
+    close(video)
+    video = [];
 end

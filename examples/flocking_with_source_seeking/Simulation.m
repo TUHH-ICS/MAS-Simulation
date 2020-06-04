@@ -12,13 +12,16 @@ profile clear
 % reproducible simulation, e. g. for profiling the code.
 rng(0);
 
+% Flag to enable exporting a video from the simulation results
+saveVideo = false;
+
 %% Network parameters
-agentCount = 25;   % Number of agents in the network
-dimension  = 2;    % Dimension of the space the agents move in
+agentCount = 25;    % Number of agents in the network
+dimension  = 2;     % Dimension of the space the agents move in
 dT         = 0.05;  % Size of the simulation time steps
-range      = 7*1.2;% Range of the radio communication
-pTransmit  = 1;    % Probability of successful transmission
-steps      = 500; % Simulation time steps
+range      = 7*1.2; % Range of the radio communication
+pTransmit  = 0.95;  % Probability of successful transmission
+steps      = 1000;  % Simulation time steps
 
 %% Field parameters
 no_centers=11;
@@ -30,13 +33,13 @@ fscale=50;
 Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
 
 %% Initialize the network
-% Network = IdealNetwork(agentCount, dimension, range);
-Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
+Network = IdealNetwork(agentCount, dimension, range);
+% Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
 % and later convert this to a standard Matlab array.
-Agents  = cell(agentCount, 1);
+Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
     % Randomly place the agents in the square [0,100]^2
     pos = 50 + 100 * (rand(dimension, 1) - 0.5);
@@ -46,7 +49,7 @@ for i = 1:length(Agents)
     % Initiallize an agent with the generated initial conditions
     Agents{i} = FlockingAgent2(Network, dT, pos, vel,Field);
 end
-Agents  = [Agents{:}];
+Agents = [Agents{:}];
 
 %% Perform simulation
 pos_history = zeros(steps+1, dimension, agentCount);
@@ -80,20 +83,42 @@ toc
 figure()
 
 % Compute boundary
-x_pos = squeeze(pos_history(:,1,:));
-y_pos = squeeze(pos_history(:,2,:));
+x_pos  = squeeze(pos_history(:,1,:));
+y_pos  = squeeze(pos_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
-lim=[bounds(x_pos);bounds(y_pos)];
-[X,Y,Z]=data_for_contour(lim,Field);
+
+% Compute contour lines
+lim     = [ bounds(x_pos); bounds(y_pos) ];
+[X,Y,Z] = data_for_contour(lim,Field);
+
+% Open video file with mp4 encoding
+if saveVideo
+    video = VideoWriter('source_seeking', 'MPEG-4');
+    video.FrameRate = 50;
+    open(video)
+else
+    video = [];
+end
+
 for k = 1:steps+1
     contour(X,Y,Z)
     hold on
     pos = squeeze(pos_history(k,:,:));
     scatter(pos(1,:), pos(2,:))
     hold off
+    
     xlim(bounds(x_pos));
     ylim(bounds(y_pos));     
     drawnow limitrate
+    
+    if ~isempty(video)
+        % Save figure as video frame
+        frame = getframe(gcf);
+        writeVideo(video, frame);
+    end
 end
 
-  
+if ~isempty(video)
+    close(video)
+    video = [];
+end
