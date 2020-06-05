@@ -14,15 +14,25 @@ classdef FlockingAgent2 < BaseAgent
         c_gradient      = 1; % constant multiplying the gradient force
     end
     
-    properties(Dependent, GetAccess = public, SetAccess = private)
-        position % Current position of the agent
-        velocity % Current velocity of the agent
-    end
     properties(GetAccess = public, SetAccess = protected)       
         gradient % gradient of the field at the position of agent
     end
+    
+    % This agent implementation chooses not to use a predefined dynamics
+    % object, so it has to declare the state on its own.
+    properties(Access = private)
+        x        % Local variable for the agent state
+    end
+    
     properties(GetAccess = private, SetAccess = immutable)
         field  % Pointer to the network object, for sending and receiving
+    end
+    
+    % These properties have to be redefined from the superclass BaseAgent
+    properties(Dependent, GetAccess = public, SetAccess = private)
+        position % Current position of the agent
+        velocity % Current velocity of the agent
+        state    % Dynamic state of the agent
     end
     
     methods     
@@ -30,11 +40,16 @@ classdef FlockingAgent2 < BaseAgent
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
-            
-            x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
-            obj@BaseAgent(network, dT, x0);
-            obj.field=field;
+
+            obj@BaseAgent(network, dT);
+            obj.x     = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
+            obj.field = field;
         end        
+        
+        function value = get.state(obj)
+            %GET.STATE Implementation of the dependent state property.
+            value = obj.x;
+        end
         
         function value = get.position(obj)
             %GET.POSITION Implementation of the dependent position
@@ -82,8 +97,7 @@ classdef FlockingAgent2 < BaseAgent
                                          FlockingAgent2.da, FlockingAgent2.h);
                                      
                 % Compute position dependent adjacency element
-                a = rho_h(dist / FlockingAgent2.ra, FlockingAgent2.h);               
-                              
+                a = rho_h(dist / FlockingAgent2.ra, FlockingAgent2.h);          
                 
                 % Calculate alignment force
                 u = u + FlockingAgent2.c_damp * a * (message.data.velocity - obj.velocity);
@@ -92,13 +106,10 @@ classdef FlockingAgent2 < BaseAgent
             % Calculate force on the agent from the source field
             obj.get_gradient_est();
             u = u -  obj.c_gradient*obj.gradient; 
-            
-            
+                        
             % Self_damping
             u = u - FlockingAgent2.c_self_damp*obj.velocity; 
-            
-            
-            
+                        
             % Implement double integrator dynamics
             obj.x(1) = obj.x(1) + obj.dT * obj.x(2);
             obj.x(2) = obj.x(2) + obj.dT * u(1);

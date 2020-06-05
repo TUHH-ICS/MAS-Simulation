@@ -5,10 +5,6 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     %   as it defines the basis properties, that are required during
     %   simulation.
     
-    properties(GetAccess = public, SetAccess = protected)
-        x        % Dynamic state of the agent
-    end
-    
     properties(GetAccess = public, SetAccess = private)
         t        % Current simulation time
     end
@@ -23,28 +19,34 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     end
     
     properties(Dependent, GetAccess = public, SetAccess = immutable)
-        nx       % Dimension of the state space of the agent
+        order    % Dynamic order, dimension of the state space of the agent
     end
     
-    % These dependent properties are only there for convenience. Because
-    % the position and velocity can be encoded in arbitrary states, this is
-    % used to easy working with the agents without increasing the storage
-    % cost.
     properties(Abstract, Dependent, GetAccess = public, SetAccess = private)
+        % These dependent properties are only there for convenience. Because
+        % the position and velocity can be encoded in arbitrary states, this is
+        % used to easy working with the agents without increasing the storage
+        % cost.
         position % Current position of the agent
         velocity % Current velocity of the agent
+        
+        % The state is also saved as a dependent property. In this way, the
+        % agent implementation can choose how to implement the dynamics.
+        % Either, the predefined dynamics objects can be used, which
+        % contain a state themselves, or it can choose to declare a local
+        % variable and manually implement the dynamics
+        state    % Dynamic state of the agent
     end
     
     methods
-        function obj = BaseAgent(network, dT, x0)
+        function obj = BaseAgent(network, dT)
             %BASEAGENT Construct an instance of this class
             %   network is a reference to the network object.
-            %   x0 is the initial state of the agent.
+            %   dT is the time between two simulation steps
             
             obj.network = network;
             obj.t       = 0;
             obj.dT      = dT;
-            obj.x       = x0;
             
             % Test if a correct network implementation was handed in
             if isa(network, 'BaseNetwork')
@@ -52,9 +54,9 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
             end
         end
         
-        function value = get.nx(obj)
-            %GET.NX Implementation of the dependent property nx
-            value = size(obj.x, 1);
+        function value = get.order(obj)
+            %GET.ORDER Implementation of the dependent property order
+            value = size(obj.state, 1);
         end
         
         function step(obj)

@@ -11,9 +11,17 @@ classdef FlockingAgent < BaseAgent
         c_damp  = 3;   % Damping between agents / alignment rule
     end
     
+    % This agent implementation chooses not to use a predefined dynamics
+    % object, so it has to declare the state on its own.
+    properties(Access = private)
+        x        % Local variable for the agent state
+    end
+    
+    % These properties have to be redefined from the superclass BaseAgent
     properties(Dependent, GetAccess = public, SetAccess = private)
         position % Current position of the agent
         velocity % Current velocity of the agent
+        state    % Dynamic state of the agent
     end
     
     methods     
@@ -22,8 +30,13 @@ classdef FlockingAgent < BaseAgent
             %   Initializes the state space to the given initial position
             %   and velocity.
             
-            x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
-            obj@BaseAgent(network, dT, x0);
+            obj@BaseAgent(network, dT);
+            obj.x = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
+        end
+        
+        function value = get.state(obj)
+            %GET.STATE Implementation of the dependent state property.
+            value = obj.x;
         end
         
         function value = get.position(obj)
