@@ -46,7 +46,9 @@ Agents = [Agents{:}];
 
 %% Perform simulation
 pos_history = zeros(steps+1, dimension, agentCount);
+vel_history = zeros(steps+1, dimension, agentCount);
 pos_history(1,:,:) = [Agents.position];
+vel_history(1,:,:) = [Agents.velocity];
 
 tic
 % profile on
@@ -63,6 +65,7 @@ for k = 1:steps
     
     % Save current position of all agents
     pos_history(k+1,:,:) = [Agents.position];
+    vel_history(k+1,:,:) = [Agents.velocity];
     
     % Print status periodically
     if rem(k, steps/100) == 0
@@ -91,7 +94,8 @@ end
 
 for k = 1:steps+1
     pos = squeeze(pos_history(k,:,:));
-    scatter(pos(1,:), pos(2,:))
+    vel = squeeze(vel_history(k,:,:));
+    quiver(pos(1,:), pos(2,:), vel(1,:), vel(2,:), 'o', 'showArrowHead', true)
     
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))
