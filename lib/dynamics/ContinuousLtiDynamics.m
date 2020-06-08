@@ -1,16 +1,21 @@
-classdef DiscreteLtiDynamics < handle
-    %DISCRETELTIDYNAMICS Convenience class for the simulation of LTI
+classdef ContinuousLtiDynamics < handle
+    %CONTINUOSLTIDYNAMICS Convenience class for the simulation of LTI
     %systems
-    %   This class implements discrete-time LTI dynamics. It is intended to
-    %   model open or closed-loop agent dynamics. 
+    %   This class implements continuous-time LTI dynamics. It is intended
+    %   to model open or closed-loop agent dynamics. 
     
     properties(GetAccess = public, SetAccess = protected)
         x % Dynamic state of the system
     end
     
-    % These matrices are the usual discrete-time matrices that represent a
-    % state-space model of an LTI system.
     properties(GetAccess = public, SetAccess = immutable)
+        % Sampling time of the overlaying discrete-time system. calling the
+        % step function will simulate the continuous time system in dT time
+        % intervals.
+        dT 
+        
+        % These matrices are the usual continuous-time matrices that
+        % represent a state-space model of an LTI system.
         A
         B
         C
@@ -26,15 +31,16 @@ classdef DiscreteLtiDynamics < handle
     end
     
     methods
-        function obj = DiscreteLtiDynamics(A, B, C, D, x0)
-            %DISCRETELTIDYNAMICS Construct an instance of this class
-            %   Sets up the internal model for simulation of a
-            %   discrete-time LTI model.
+        function obj = ContinuousLtiDynamics(A, B, C, D, dT, x0)
+            %CONTINUOUSLTIDYNAMICS Construct an instance of this class
+            %   Sets up the interal model for simulation of a
+            %   continuous-time LTI model.
             
-            obj.A = A;
-            obj.B = B;
-            obj.C = C;
-            obj.D = D;
+            obj.dT = dT;
+            obj.A  = A;
+            obj.B  = B;
+            obj.C  = C;
+            obj.D  = D;
             
             % If no output is required, you can simply pass in [] and this
             % will fix the dimensions.
@@ -48,7 +54,7 @@ classdef DiscreteLtiDynamics < handle
             obj.w = NaN;
             
             % Initialize state to default value, if no value is given
-            if nargin <= 4
+            if nargin <= 5
                 obj.x = zeros(size(A,1), 1);
             else
                 obj.x = x0;
@@ -70,7 +76,13 @@ classdef DiscreteLtiDynamics < handle
             %   This function takes an input w and evaluates the state
             %   equation of the LTI system.
             obj.w = w;
-            obj.x = obj.A * obj.x + obj.B * w;
+            
+            % Set up ODE function with current input
+            fun   = @(t, y) obj.A * y + obj.B * w;
+            
+            % Solve ODE for one time step
+            [~,y] = ode45(fun, [0, obj.dT], obj.x);
+            obj.x = y(end, :)';
         end
     end
 end

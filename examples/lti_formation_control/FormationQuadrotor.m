@@ -1,21 +1,10 @@
-classdef FormationAgent < BaseAgent
-    %FORMATIONAGENT Examplary agent implementation with simple LTI dynamics
-    %that performs a formation control manoeuvre.
-    
-    % Define the constants of the agent and the consensus protocol
-    properties(Constant)
-        b       = 1     % Friction coefficient
-        m       = 1     % Mass of the agent
-        epsilon = 0.01; % Convergence speed of the consensus protocol
-    end
-    
-    properties(GetAccess = public, SetAccess = protected)
-        consens  % State of the consensus protocol
-    end
+classdef FormationQuadrotor < BaseAgent
+    %FORMATIONQUADROTOR Quadrotor agent that performs a formation control
+    %maneuvre in a group of agents.
+    %   The agent dynamics are approximated as a LTI system using Jacobian
+    %   linearization. See ATC exercise 6.3).
     
     properties(GetAccess = public, SetAccess = immutable)
-        Fx       % State feedback coefficient
-        Fr       % Feed-forward coefficient
         ref      % Formation reference
     end
     
@@ -31,40 +20,36 @@ classdef FormationAgent < BaseAgent
     end
     
     methods
-        function obj = FormationAgent(network, dT, initialPos, reference)
-            %FORMATIONAGENT Construct an instance of this class
+        function obj = FormationQuadrotor(network, dT, initialPos, reference)
+            %FORMATIONQUADROTOR Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
             
             obj@BaseAgent(network, dT);
             
-            % Define the mass friction system
-            A = [ 1  dT                                       ;
-                  0  1 - dT*FormationAgent.b/FormationAgent.m ];
-            B = [ 0; dT/FormationAgent.m ];
+            % Import quadrotor model and controller
+            data = load('quadrotor_model');
             
-            % Kronecker up to 2 dimensions
-            A_bar = kron(eye(3), A);
-            B_bar = kron(eye(3), B);
-            x0    = kron(initialPos, [1; 0]);
+            % Build closed-loop dynamic system
+            CL   = lft(data.Paug*data.K, -eye(length(eig(data.Paug))));
+            x0 = [ kron(initialPos, [1; 0]); zeros(25,1) ];
             
-            % Initialize agent dynamics
-            obj.dynamics = DiscreteLtiDynamics(A_bar, B_bar, [], [], x0);
-            
-            % Initialize the consensus protocol to the initial position of
-            % the agent itself
-            obj.consens = initialPos;
-            
+            discrete = true;
+            if discrete
+                dCL  = c2d(CL, dT);
+                [A,B] = ssdata(dCL);
+                obj.dynamics = DiscreteLtiDynamics(A, B, [], [], x0);
+            else
+                [A,B] = ssdata(CL);
+                obj.dynamics = ContinuousLtiDynamics(A, B, [], [], dT, x0);
+            end
+                
             % Set the formation reference if one is given to the agent
             if nargin <= 3
                 obj.ref = zeros(size(initialPos));
             else
                 obj.ref = reference;
             end
-            
-            % Set controller matrices
-            obj.Fr = kron(eye(3),   168.8665);
-            obj.Fx = kron(eye(3), [-168.8668, -25.0094]);
         end
         
         function value = get.state(obj)
@@ -98,13 +83,13 @@ classdef FormationAgent < BaseAgent
                 % positions, not the sum
                 data        = [messages.data];
                 positions   = [data.position];
-                dist        = mean(obj.position - positions - obj.ref, 2);
-                obj.consens = obj.consens - obj.epsilon * (dist);
+                dist        = mean(positions, 2) + obj.ref - obj.position;
+            else
+                dist        = zeros(3,1);
             end
             
             % Evaluate agent dynamics
-            u = obj.Fr * obj.consens + obj.Fx * obj.dynamics.x;
-            obj.dynamics.step(u);
+            obj.dynamics.step(dist);
             
             % Send message to network, include only the position 
             data = struct;
