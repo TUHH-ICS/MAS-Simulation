@@ -5,13 +5,18 @@ classdef StationaryAgent < BaseAgent
     %   does not move ever, and simple drops all received messages without
     %   handling them.
     
+    properties(GetAccess = private, SetAccess = immutable)
+        x        % Local state, only contains the constant position
+    end
+    
     properties(Dependent, GetAccess = public, SetAccess = private)
         position % Current position of the agent
         velocity % Current velocity of the agent
+        state    % Dynamic state of the agent
     end
     
     methods     
-        function obj = StationaryAgent(network, dT, initialPos)
+        function obj = StationaryAgent(network, dT, pos)
             %STATIONARYAGENT Construct an instance of this class
             
             % In case the constructor is called without arguments, provide
@@ -24,10 +29,16 @@ classdef StationaryAgent < BaseAgent
                 dT = -1;
             end
             if nargin <= 2
-                initialPos = 0;
+                pos = 0;
             end
             
-            obj@BaseAgent(network, dT, initialPos);
+            obj@BaseAgent(network, dT);
+            obj.x = pos;
+        end
+        
+        function value = get.state(obj)
+            %GET.STATE Implementation of the dependent state property.
+            value = obj.x;
         end
         
         function value = get.position(obj)
