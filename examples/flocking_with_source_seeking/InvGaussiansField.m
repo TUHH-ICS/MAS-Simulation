@@ -23,6 +23,19 @@ classdef InvGaussiansField
             obj.Sigmas     = kron(ones(1,no_centers),fvar*eye(d)); 
             obj.scales     = fscale*ones(1,no_centers);
         end
+        function field_eval=get_field_value_at(obj,z)
+            % This function outputs the value of the field at the 
+            % location z
+            field_eval=0;            
+            for i=1:obj.no_centers
+                source_i=obj.centers(:,i);
+                Sigma_i=obj.Sigmas(:,(i-1)*obj.dim+1:i*obj.dim);
+                scale_i=obj.scales(i);
+                e=(z-source_i);
+                field_eval = field_eval +scale_i*exp(-0.5*e'*inv(Sigma_i)*e);
+            end
+            field_eval=-1*field_eval;
+        end
         function grad = get_true_gradient(obj,q_agent) 
             %GET.GRAD_ESTIMATE 
             %   This function asks for a gradient at the q_agent location. 
