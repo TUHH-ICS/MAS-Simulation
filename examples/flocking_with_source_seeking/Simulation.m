@@ -29,8 +29,10 @@ fcenter=50;
 frange=100;
 fvar=1e2;
 fscale=50;
-% Initialize the field
-Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
+%% Initialize the external potential field
+conc_Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
+%% Initialize the Interaction field between agents
+interac_field=OS_InteractionField();
 
 %% Initialize the network
 Network = IdealNetwork(agentCount, dimension, range);
@@ -47,7 +49,7 @@ for i = 1:length(Agents)
     vel = 1 * (rand(dimension, 1) - 0.5);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent2(Network, dT, pos, vel,Field);
+    Agents{i} = FlockingAgent2(Network, dT, pos, vel,conc_Field,interac_field);
 end
 Agents = [Agents{:}];
 
@@ -55,22 +57,39 @@ Agents = [Agents{:}];
 pos_history = zeros(steps+1, dimension, agentCount);
 pos_history(1,:,:) = [Agents.position];
 
+% Data structure for Energy analysis
+Energy=struct;
+Energy.KE=zeros(1,steps);
+Energy.Vfield=zeros(1,steps);
+Energy.V=zeros(1,steps);
+
+
+
 tic
 % profile on
 for k = 1:steps
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
-    % its own position and velocity to the other agents as a message.    
+    % its own position and velocity to the other agents as a message.
+    
     for agent = Agents        
         agent.step()
     end
     
     % Distribute messages among the agents
-    Network.process()
+    Network.process();
     
     % Save current position of all agents
     pos_history(k+1,:,:) = [Agents.position];
     
+    for agent = Agents        
+        Energy.KE(1,k)=Energy.KE(1,k)+0.5*norm(agent.velocity,2)^2;
+        Energy.Vfield(1,k)=Energy.Vfield(1,k)+conc_Field.get_field_value_at(agent.position);        
+        
+        % Calculate the distance from the agent to all other agents
+        dist = vecnorm(agent.position - squeeze(pos_history(k+1,:,:))); 
+        Energy.V(1,k)=Energy.V(1,k)+0.5*sum(interac_field.look_up_psi_a(dist'));        
+    end
     % Print status periodically
     if rem(k, steps/100) == 0
         fprintf('Simulation %3.5g%% finished\n', 100*k/steps)
@@ -79,6 +98,8 @@ end
 % profile viewer
 toc
 
+%% Analyze energy in the system
+post_process(dT,steps,Energy)
 %% Animate simulation results
 figure()
 
@@ -89,7 +110,7 @@ bounds = @(x) [min(min(x)), max(max(x))];
 
 % Compute contour lines
 lim     = [ bounds(x_pos); bounds(y_pos) ];
-[X,Y,Z] = data_for_contour(lim,Field);
+[X,Y,Z] = data_for_contour(lim,conc_Field);
 
 % Open video file with mp4 encoding
 if saveVideo

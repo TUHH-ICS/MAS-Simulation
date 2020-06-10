@@ -4,18 +4,10 @@ classdef FlockingAgent2 < BaseAgent
     % forcing term.
     
     % Define constants of the flocking protocol
-    properties(Constant)
-        epsilon         = 0.1; % Used to define the sigma_norm
-        da              = 7;   % Equilibrium distance(or desired distance) to neighbours
-        ra              = 1.2 * FlockingAgent2.da; % Sensing radius (no interaction with agents outside ra disc)
-        h               = 0.9; % Bump function goes to zero after h
+    properties(Constant)        
         c_damp          = 3;   % Damping between agents / alignment rule
         c_self_damp     = 1;   % Damping between agents and environment (e.g Viscocity)
         c_gradient      = 1; % constant multiplying the gradient force
-    end
-    
-    properties(GetAccess = public, SetAccess = protected)       
-        gradient % gradient of the field at the position of agent
     end
     
     % This agent implementation chooses not to use a predefined dynamics
@@ -25,7 +17,8 @@ classdef FlockingAgent2 < BaseAgent
     end
     
     properties(GetAccess = private, SetAccess = immutable)
-        field  % Pointer to the network object, for sending and receiving
+        interac_field % Interaction field with other agents
+        conc_field  % Pointer to the network object, for sending and receiving
     end
     
     % These properties have to be redefined from the superclass BaseAgent
@@ -36,14 +29,14 @@ classdef FlockingAgent2 < BaseAgent
     end
     
     methods     
-        function obj = FlockingAgent2(network, dT, initialPos, initialVel, field)
+        function obj = FlockingAgent2(network, dT, initialPos, initialVel, conc_field,interac_field)
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
-
             obj@BaseAgent(network, dT);
             obj.x     = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
-            obj.field = field;
+			obj.conc_field=conc_field;
+            obj.interac_field=interac_field;
         end        
         
         function value = get.state(obj)
@@ -67,7 +60,7 @@ classdef FlockingAgent2 < BaseAgent
             value = [obj.x(2); obj.x(4)];
         end
         
-        function [] = get_gradient_est(obj)
+        function grad_est = get_gradient_est(obj)
             %get_gradient_est
             % This function estimates the gradient of the field at the
             % current agent location. In the current implementation, we
@@ -76,8 +69,8 @@ classdef FlockingAgent2 < BaseAgent
             % Next step should be to querry a data set (say 10 points) near
             % the current agent location and solve a LS problem to estimate
             % the gradient.
-            grad=obj.field.get_true_gradient(obj.position);            
-            obj.gradient=grad+norm(grad)*0.1*(-0.5+rand(size(grad,1),1));
+            grad=obj.conc_field.get_true_gradient(obj.position);            
+            grad_est=grad+norm(grad)*0.1*(-0.5+rand(size(grad,1),1));
         end
         
         
@@ -87,26 +80,17 @@ classdef FlockingAgent2 < BaseAgent
             
             % Implement the flocking protocol
             u = zeros(2, 1);
-            for message = messages
-                % Compute sigma distance between the two agents
-                [dist, grad] = sigma_norm(message.data.position - obj.position,...
-                                          FlockingAgent2.epsilon);
-                              
-                % Calculate force on the agent from the virtual potential field
-                u = u + grad * phi_alpha(dist, FlockingAgent2.ra,...
-                                         FlockingAgent2.da, FlockingAgent2.h);
-                                     
-                % Compute position dependent adjacency element
-                a = rho_h(dist / FlockingAgent2.ra, FlockingAgent2.h);          
-                
+            for message = messages                                
+                % Force due to interaction field potential field and the
+                % adjacency element betwen agents
+                [force,a]=obj.interac_field.get_interaction_force(message.data.position - obj.position);
+                u = u + force;                     
                 % Calculate alignment force
                 u = u + FlockingAgent2.c_damp * a * (message.data.velocity - obj.velocity);
             end
             
-            % Calculate force on the agent from the source field
-            obj.get_gradient_est();
-            u = u -  obj.c_gradient*obj.gradient; 
-                        
+            % Calculate force on the agent from the source field            
+            u = u -  obj.c_gradient*get_gradient_est(obj); 
             % Self_damping
             u = u - FlockingAgent2.c_self_damp*obj.velocity; 
                         
