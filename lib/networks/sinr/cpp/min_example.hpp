@@ -6,19 +6,6 @@
 #include <assert.h>
 #include "fading.h"
 
-// uncomment here
-//#include "mex.hpp"
-//#include "StructArray.hpp"
-//
-//using matlab::mex::ArgumentList;
-
-// remove dummy structArray 
-namespace matlab{
-	namespace data{
-		typedef std::vector<double> StructArray;
-	}
-}
-
 /* #######################################################
  * #
  * # min_example.hpp
@@ -30,30 +17,11 @@ namespace matlab{
  * #######################################################
  */
 
-
 // ############## BEGIN: Alias declaration ##############
 typedef unsigned int AgentID;
 typedef unsigned int SlotNumber;
 // ############## END  : Alias declaration ############## 
 
-/*
-namespace TLS{
-	template <typename T>
-	struct Type2Type{
-		// Modern C++ Design, A. Alexandrescu, p. 32
-		typedef T OriginalType;
-	}; 
-}
-*/
-
-//simple positon data structure
-/*
-struct vec3{
-	double x1;
-	double x2;
-	double x3;
-}; 
-*/
 using TLS::vec3;
 
 // Example data type consisting of all data the Agents will exchange from within MATLAB.
@@ -62,15 +30,7 @@ using TLS::vec3;
 class Data{
 	public:
 		vec3 m_pos;
-		//matlab::data::StructArray m_structArray;
 		Data(){}; 
-		//Data(const vec3 pos, const matlab::data::StructArray& structArray): m_pos(pos), m_structArray(structArray){};
-		/*
-		void update(const vec3& pos, const matlab::data::StructArray& structArray){
-			m_pos = pos;	
-			m_structArray = structArray;
-		}
-		*/
 }; 
 
 
@@ -85,7 +45,9 @@ class Agent{
 		static unsigned int m_IDcounter;
 		const int m_ID;
 		TheData* m_pData;
-
+        
+        std::vector<std::tuple<AgentID, SlotNumber> > m_received_from;
+        
 		Agent() : m_ID(m_IDcounter){
 			m_IDcounter++;
 		}
@@ -126,6 +88,8 @@ vec3 Agent<TheData>::get_pos(){
 
 template <class TheData>
 void Agent<TheData>::set_pos(const vec3 pos){
+//     set_vec3(m_pData->m_pos, pos);
+    
 	m_pData->m_pos.x1 = pos.x1;
 	m_pData->m_pos.x2 = pos.x2;
 	m_pData->m_pos.x3 = pos.x3;
@@ -399,14 +363,10 @@ class SEMemory{
 	public:
 		MyAgent m_agentMemory[maxNumberOfAgents];
 		MyData m_dataMemory[maxNumberOfAgents];
-		//MyAgent m_agentMemory[n];
-		//MyData m_dataMemory[n];
 		std::vector<Agent<MyData>*> m_pAgents;
 		const unsigned int m_numberOfAgents;
 		NetworkChannel<MyData> m_channel;
-		double m_beaconFreq;          
-
-		//SEMemory(const unsigned int numberOfAgents, const double samplingFrequency) :  m_beaconFreq(samplingFrequency){assert(n <= maxNumberOfAgents)}; 
+		double m_beaconFreq;           
 
 		SEMemory(const unsigned int numberOfAgents, SINR::Fading& fading, const unsigned int numberOfSlots, const int slotSeed, const double beaconFreq) : m_numberOfAgents(numberOfAgents), m_channel(NetworkChannel<MyData>(fading, numberOfAgents, numberOfSlots, slotSeed)), m_beaconFreq(beaconFreq){
 				assert(m_numberOfAgents <= maxNumberOfAgents);
@@ -416,33 +376,15 @@ class SEMemory{
 				}
 		}; 
  
-                                                                                                                                                                                              
-
-       		SimulationEnvironment<Data> create(){
-			//return _create(m_agentMemory[0].dataType);
-			return SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
-		}
-
-		/*
-		SimulationEnvironment<Data> _create(TLS::Type2Type<Data>&){
-
-			const double factor = 500.0;
-			vec3 initPos = {-5.0 * factor, 0.0, 0.0};
-
-			for (unsigned int i = 0; i < m_numberOfAgents; i++){
-				initPos.x1 += factor * 1.0;
-				initPos.x2 = factor * ( -2.0 + static_cast<double>(i%5));
-				m_dataMemory[i].init(initPos, {0.0, 0.0, 0.0});
-
+       	SimulationEnvironment<Data> create(){
+            for (unsigned int i = 0; i < m_numberOfAgents; i++){
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
 			}
-	
-			const double timeInterval = 1e-5;
-			const double samplingTime = 5.0 * timeInterval;
-		} 
-		*/
-
+            
+			return SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
+		}
+		
 };
 
 template <class TheData>
@@ -470,13 +412,6 @@ class NetworkChannel{
 		void reset_currently_receiving_List();
 
 		int pick_position_from_currentlyReceivingFromList(AgentID receiver);
-
-
-//	protected:
-
-		//intData *currentData;
-
-		//int init_slot();
 };
 
 // ################### BEGIN class NetworkChannel ###################
@@ -540,12 +475,6 @@ int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(Agent
 template <class TheData>
 SlotNumber NetworkChannel<TheData>::sample_slot(){
 	return rand()%m_numberOfSlots;
-
-	//SlotNumber chosen = rand()%m_numberOfSlots;
-	//std::cerr << chosen << std::endl;
-	//return chosen;
-	
-
 } 
 
 template <class TheData>

@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "fading.h"
 #include <iostream>
 #include <cmath>

@@ -56,7 +56,7 @@ classdef(Abstract) BaseNetwork < handle
         % Method that must be called by each agent after it changed its
         % position. This position data is required to determine the
         % recipients of the messages.
-        setPosition(obj, agent, position)
+        setPosition(obj, agent)
         
         % Method that gets called by the simulation framework. It should be
         % used for processing all send messages and putting them in the
