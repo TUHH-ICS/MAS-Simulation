@@ -140,13 +140,23 @@ public:
                 matlab::data::TypedArray<double> position = inputs[2];
                 matlab::data::ArrayDimensions dims = position.getDimensions();
                 
-                if (dims[0] != 3 || dims[1] != 1) {
+                if (dims[0] < 1 || dims[0] > 3 || dims[1] != 1) {
                     error("Agent position vector has the wrong dimensions");
                     break;
                 }
+                
+                vec3 setVec = {0.0, 0.0, 0.0};
+                switch(dims[0]){
+                    case 3:
+                        setVec.x3 = position[2];
+                    case 2:
+                        setVec.x2 = position[1];
+                    case 1:
+                        setVec.x1 = position[0];
+                }
 
                 // update agent's position
-                sim->m_pAgents[id - 1]->set_pos({ position[0], position[1], position[2] });
+                sim->m_pAgents[id - 1]->set_pos(setVec);
   
                 break;
             }
@@ -182,13 +192,11 @@ public:
                 // Create (m,2) Matlab Array, where *m* is the number of received messages. 
                 // Each row consists of the sender's id and the slot in which the message was received.
                 auto returnVec = factory.createArray<unsigned int>({ receptionList.size(), 2});
-
-                // flatten tuple vector to 1d vector in column-major order
 		
                 int i = 0;
                 for (auto &tuple : receptionList){
-                    returnVec[i][0] = std::get<0>(tuple);
-                    returnVec[i][1] = std::get<1>(tuple);
+                    returnVec[i][0] = std::get<0>(tuple) + 1;
+                    returnVec[i][1] = std::get<1>(tuple) + 1;
                 }
                 outputs[0] = returnVec;
 
