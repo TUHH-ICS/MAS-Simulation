@@ -41,7 +41,7 @@ classdef FormationQuadrotor < BaseAgent
                 obj.dynamics = DiscreteLtiDynamics(A, B, [], [], x0);
             else
                 [A,B] = ssdata(CL);
-                obj.dynamics = ContinuousLtiDynamics(A, B, [], [], dT, x0);
+                obj.dynamics = ContinuousLtiDynamics(dT, A, B, [], [], x0);
             end
                 
             % Set the formation reference if one is given to the agent
