@@ -54,8 +54,11 @@ classdef DiscreteNonlinearDynamics < handle
             %
             %   The returned valued is empty if no output equation is
             %   specified.
-                        
-            z     = obj.h(obj.k, obj.x, w);
+            
+            if nargout >= 1
+                z = obj.h(obj.k, obj.x, w);
+            end
+            
             obj.x = obj.f(obj.k, obj.x, w);
             
             % Advance system time

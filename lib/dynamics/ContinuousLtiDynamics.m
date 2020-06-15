@@ -70,7 +70,9 @@ classdef ContinuousLtiDynamics < handle
             %   The returned valued is empty if no C and D matrices are
             %   specified.
             
-            z     = obj.C * obj.x + obj.D * w;
+            if nargout >= 1
+                z = obj.C * obj.x + obj.D * w;
+            end
 
             % Solve ODE for one time step
             fun   = @(~,y) obj.A * y + obj.B * w;

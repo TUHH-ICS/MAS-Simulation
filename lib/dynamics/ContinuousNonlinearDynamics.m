@@ -62,7 +62,9 @@ classdef ContinuousNonlinearDynamics < handle
             %   The returned valued is empty if no output equation is
             %   specified.
             
-            z     = obj.h(obj.t, obj.x, w);
+            if nargout >= 1
+            	z = obj.h(obj.t, obj.x, w);
+            end
             
             % Solve ODE for one time step
             fun   = @(t,y) obj.f(t, y, w);

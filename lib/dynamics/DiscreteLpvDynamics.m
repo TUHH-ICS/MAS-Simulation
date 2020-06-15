@@ -67,8 +67,12 @@ classdef DiscreteLpvDynamics < handle
             %   The returned valued is empty if no C and D functions are
             %   specified.
             
-            rho   = obj.rho_fun(obj.k, obj.x, w);
-            z     = obj.C(rho) * obj.x + obj.D(rho) * w;
+            rho = obj.rho_fun(obj.k, obj.x, w);
+            
+            if nargout >= 1
+                z = obj.C(rho) * obj.x + obj.D(rho) * w;    
+            end
+            
             obj.x = obj.A(rho) * obj.x + obj.B(rho) * w;
             
             % Advance system time

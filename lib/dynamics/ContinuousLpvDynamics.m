@@ -73,8 +73,10 @@ classdef ContinuousLpvDynamics < handle
             %   The returned valued is empty if no C and D functions are
             %   specified.
 
-            rho = obj.rho_fun(obj.t, obj.x, w);
-            z   = obj.C(rho) * obj.x + obj.D(rho) * w;
+            if nargout >= 1
+                rho = obj.rho_fun(obj.t, obj.x, w);
+                z   = obj.C(rho) * obj.x + obj.D(rho) * w;
+            end
             
             % Solve ODE for one time step
             fun   = @(t,y) obj.A(obj.rho_fun(t,y,w)) * y ...

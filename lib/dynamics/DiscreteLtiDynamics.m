@@ -63,7 +63,9 @@ classdef DiscreteLtiDynamics < handle
             %   The returned valued is empty if no C and D matrices are
             %   specified.
             
-            z     = obj.C * obj.x + obj.D * w;
+            if nargout >= 1
+                z = obj.C * obj.x + obj.D * w;
+            end 
             obj.x = obj.A * obj.x + obj.B * w;
         end
     end
