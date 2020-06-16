@@ -1,4 +1,4 @@
-classdef DiscreteLpvDynamics < handle
+classdef DiscreteLpvDynamics < DiscreteDynamics
     %DISCRETELPVDYNAMICS Convenience class for the simulation of LPV
     %systems
     %   This class implements discrete-time LPV dynamics. It is intended to
@@ -10,11 +10,6 @@ classdef DiscreteLpvDynamics < handle
     %
     %   where the output equation can be neglected. rho(k, x(k), w(k)) is
     %   the (vector-valued) scheduling parameter of the system.
-    
-    properties(GetAccess = public, SetAccess = protected)
-        x % Dynamic state of the system
-        k % Current timestep of the dynamic system
-    end
     
     properties(GetAccess = public, SetAccess = immutable)
         % In the case of LPV systems, A, B, C, D are not matrices, but
@@ -35,23 +30,46 @@ classdef DiscreteLpvDynamics < handle
             %   discrete-time LPV model.
             %
             %   If no output is required, C & D can be set to []. If no
-            %   initial state x0 is specified, x0 = 0 is used. The initial
-            %   state must be passed in, as its dimension cannot be
-            %   inferred from the state equation.
+            %   initial state x0 is specified, x0 = 0 is used.
             
+            % Initialize state to default value, if no value is given
+            if nargin <= 5
+                if isa(A, 'function_handle')
+                    vek = ProbingValue.withDimension([], 1);
+                    sz  = size(A(vek));
+
+                    if any(isnan(sz))
+                        x0 = 0;
+                    else
+                        x0= zeros(sz(1), 1);
+                    end
+                else
+                    x0 = zeros(size(A,1), 1);
+                end
+            end
+            
+            obj@DiscreteDynamics(x0);
             obj.rho_fun = rho;
             obj.A = makeHandle(A);
             obj.B = makeHandle(B);
             
-            obj.x = x0;
-            obj.k = 0;
-            
             % If no output is required, you can either leave C & D out, or
             % pass in [] for both. This will in that case fix the
             % dimensions. Dropping only one will not work.
-            if isempty(C) && isempty(D)
+            if nargin <= 3 || (isempty(C) && isempty(D))
+                if isa(B, 'function_handle')
+                    vek = ProbingValue.withDimension([], 1);
+                    sz  = size(B(vek), 2);
+
+                    if isnan(sz)
+                        error('Size of D cannot be determined automatically.')
+                    end
+                else
+                    sz = size(B, 2);
+                end
+                
                 obj.C = @(~) double.empty(0, length(x0));
-                obj.D = @(~) double.empty(0, 1);
+                obj.D = @(~) double.empty(0, sz);
             else
                 obj.C = makeHandle(C);
                 obj.D = makeHandle(D);

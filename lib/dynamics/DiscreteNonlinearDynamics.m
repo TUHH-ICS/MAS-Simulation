@@ -1,4 +1,4 @@
-classdef DiscreteNonlinearDynamics < handle
+classdef DiscreteNonlinearDynamics < DiscreteDynamics
     %DISCRETENONLINEARDYNAMICS Convenience class for the simulation of
     %general discrete-time nonlinear dynamics.
     %   This class implements general nonlinear dynamics in state-space
@@ -9,11 +9,6 @@ classdef DiscreteNonlinearDynamics < handle
     %
     %   where the output equation can be neglected, and can thus be
     %   nonlinear, time-dependent and biprober.
-    
-    properties(GetAccess = public, SetAccess = protected)
-        x % Dynamic state of the system
-        k % Current timestep of the dynamic system
-    end
     
     % These two functions are used to define the system dynamics as stated
     % in the comment above.
@@ -28,21 +23,30 @@ classdef DiscreteNonlinearDynamics < handle
             %   Sets up the internal model for simulation of a
             %   discrete-time nonlinear model.
             %
-            %   If no output is required, h can be set to []. The initial
-            %   state must be passed in, as its dimension cannot be
-            %   inferred from the state equation.
+            %   If no output is required, h can be set to []. If no initial
+            %   state x0 is specified, x0 = 0 is used.
             
+            % Initialize state to default value, if no value is given
+            if nargin <= 2
+                vek = ProbingValue.withDimension([], 1);
+                sz  = size(f(0, vek, vek));
+                
+                if any(isnan(sz))
+                    x0 = 0;
+                else
+                    x0 = zeros(sz);
+                end
+            end
+            
+            obj@DiscreteDynamics(x0);
             obj.f = f;
             
-            obj.x = x0;
-            obj.k = 0;
-            
             % If no output is required, this will set a default
-            if isempty(h)
+            if nargin <= 1 || isempty(h)
                 obj.h = @(~,~,~)[];
             else
                 obj.h = h;
-            end          
+            end
         end
         
         function z = step(obj, w)
