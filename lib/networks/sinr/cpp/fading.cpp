@@ -7,8 +7,6 @@
 #include <random>
 #include <set>
 
-//#include <python2.7/Python.h>
-
 /* *****************************************************
  *  fading.cpp
  *  Author: Daniel Schneider [ds] (schneiderd@uni-koblenz.de)
@@ -17,18 +15,11 @@
  *  *****************************************************
 */
 
-
 namespace SINR{
-
-//using TLS::vec3;
-
-
-
 
 // ############## BEGIN: Fading ##############
 
 Fading::Fading(const unsigned int numberOfAgents, const unsigned int randomSeed, PowerVec& powerVector, WirelessProtocolParameters& protocol, const double alphaPL) : m_numberOfAgents(numberOfAgents), m_randomSeed(randomSeed), m_powerVec(powerVector), m_protocol(protocol), m_alphaPL(alphaPL){
-	//m_interferenceByAgent = new double[m_numberOfAgents];
 	m_pRandomGenerator = new std::default_random_engine(randomSeed);
 
 	m_interferenceInCurrentSlot = new double*[m_numberOfAgents];
@@ -38,33 +29,28 @@ Fading::Fading(const unsigned int numberOfAgents, const unsigned int randomSeed,
 			m_interferenceInCurrentSlot[i][j] = 0.0;
 		} 
 	}
-
 }
 
 Fading::~Fading(){
 	delete m_pRandomGenerator;
-
-	//delete[] m_interferenceByAgent;
 
 	for (unsigned int i = 0; i < m_numberOfAgents; i++){
 		delete[] m_interferenceInCurrentSlot[i];
 	}
 
 	delete[] m_interferenceInCurrentSlot;
-
 }; 
 
 void Fading::sample_by_slot(const std::vector<AgentID>& sendingAgents, const vec3** pAgentPositions){
-
 	std::cerr << "was Here base!!!!" << std::endl;
 	exit(1);
 } 
 
 double Fading::get_mu_ij(const AgentID& i, const AgentID& j, const vec3** pAgentPositions){
 
-			return std::pow(TLS::vec3_dist(
-					*(pAgentPositions[i]),
-					*(pAgentPositions[j])) * 4.0 * M_PI /m_protocol.wavelength(), m_alphaPL) /m_powerVec[i];
+	return std::pow(TLS::vec3_dist(
+			*(pAgentPositions[i]),
+			*(pAgentPositions[j])) * 4.0 * M_PI /m_protocol.wavelength(), m_alphaPL) /m_powerVec[i];
 }
 // ############## END: Fading ##############
 
@@ -113,14 +99,7 @@ double WirelessProtocolParameters::wavelength(){
 	return m_c / m_freq;
 }
 
-/*
 double WirelessProtocolParameters::sinr_threshold(){
-	return std::pow(2.0, (m_channelCapacity/m_channelBandwidth)-1.0);
-}
-*/
-double WirelessProtocolParameters::sinr_threshold(){
-	//assert(0<=effectiveBitrate <= m_channelCapacity);
-
 	return std::pow(2.0, (m_bitrate/m_channelBandwidth)-1.0);
 }
 
@@ -133,6 +112,5 @@ double WirelessProtocolParameters::get_far_field_distance(const double antennaDi
 void WirelessProtocolParameters::set_bitrate(const double& bitrate){
 	m_bitrate = bitrate;
 } 
-
 
 }// end namespace SINR

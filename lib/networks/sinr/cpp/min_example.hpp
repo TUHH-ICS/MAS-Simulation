@@ -24,15 +24,15 @@ typedef unsigned int SlotNumber;
 
 using TLS::vec3;
 
-// Example data type consisting of all data the Agents will exchange from within MATLAB.
-// MATLAB Agents should thus use this data structure directly. 
-
 class Data{
 	public:
 		vec3 m_pos;
-		Data(){}; 
-}; 
 
+		void init(const vec3& pos){
+			m_pos = pos;	
+		}
+
+}; 
 
 // Agent Base class
 template <class TheData>
@@ -41,13 +41,13 @@ class Agent{
 		TLS::Type2Type<Data> dataType;
 		typedef TheData DataType;
 
+		std::vector<std::tuple<AgentID, SlotNumber> > m_received_from;
+
 		int set_network_time(const double t);
 		static unsigned int m_IDcounter;
 		const int m_ID;
 		TheData* m_pData;
-        
-        std::vector<std::tuple<AgentID, SlotNumber> > m_received_from;
-        
+
 		Agent() : m_ID(m_IDcounter){
 			m_IDcounter++;
 		}
@@ -88,8 +88,6 @@ vec3 Agent<TheData>::get_pos(){
 
 template <class TheData>
 void Agent<TheData>::set_pos(const vec3 pos){
-//     set_vec3(m_pData->m_pos, pos);
-    
 	m_pData->m_pos.x1 = pos.x1;
 	m_pData->m_pos.x2 = pos.x2;
 	m_pData->m_pos.x3 = pos.x3;
@@ -132,7 +130,6 @@ class SomeAgent : public Agent<Data>{
 	public:
 		unsigned int m_numberOfAgents;
 		double m_beaconFreq;
-		std::vector<std::tuple<AgentID, SlotNumber> > m_received_from;
 
 		int init(DataType* pInitialData, const unsigned int numberOfAgents, const double beaconFrequency){
  		       	m_pData = pInitialData;
@@ -166,6 +163,7 @@ class SimulationEnvironment{
 	    const double m_samplingTime;
 	    const vec3** m_pAgentPositions;
 
+	    SimulationEnvironment(){}; 
 	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel);
 	    ~SimulationEnvironment();
 
@@ -175,16 +173,24 @@ class SimulationEnvironment{
 	 protected:
 	    void _send(const AgentID sendingAgent, const TheData& data);
 	    Channel &m_channel;
-	    
+	    bool m_inited; 
 }; 
 
 template <class MyData>
 SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel){ 
+ 	assert(channel.m_numberOfAgents == m_numberOfAgents);
+	assert(m_pAgents.size() == m_numberOfAgents);
 
+	m_pAgentPositions = new const vec3*[m_numberOfAgents];
+
+	for (unsigned int i = 0; i < m_numberOfAgents; i++){
+		m_pAgentPositions[i] = &(m_pAgents[i]->m_pData->m_pos);
+	}  
 }
 
 template <class MyData>
 SimulationEnvironment<MyData>::~SimulationEnvironment(){
+	delete[] m_pAgentPositions;
 }
 template <class MyData>
 void SimulationEnvironment<MyData>::_send(const AgentID sendingAgent, const MyData& data){
@@ -203,13 +209,11 @@ int SimulationEnvironment<MyData>::process(){
 
 	//initialize channel
 	m_channel.init();
-
 	
 	//preprocessing phase
 	for (AgentID i = 0; i< m_numberOfAgents; i++){
 		m_pAgents.at(i)->pre_process();
 	}
-	
 
 	//Sending/receiving phase:
 	// 1) Sending
@@ -225,7 +229,6 @@ int SimulationEnvironment<MyData>::process(){
 		auto sendingAgentsInSlot_k = m_channel.get_sending_agents_by_slot(k);
 
 		if (sendingAgentsInSlot_k.size() == 0){
-			//std::cout << "skipping..." << std::endl;	
 			continue;
 		} 
 
@@ -247,7 +250,6 @@ int SimulationEnvironment<MyData>::process(){
 				double interference = 0;
 				bool agent_vSendingInSlot_k = false;
 				for (AgentID id_l : sendingAgentsInSlot_k){
-					//if ((id_l == id_u) || (id_l == id_v))
 					if (id_l == id_u)
 						{continue;}
 					if (id_l == id_v){
@@ -290,18 +292,12 @@ int SimulationEnvironment<MyData>::process(){
 							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
 						}
 						else{
-
 							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
 						} 
-					} 
-					else{
-						//std::cout << "no reception" << std::endl;
-						//std::cout << m_channel.m_fading.m_interferenceInCurrentSlot[id_u][id_v] - m_channel.m_fading.m_protocol.sinr_threshold() << std::endl;
 					}
 				}
 				else{ //Bernoulli model
 					const double p = 0.8;
-					//const double prob = p/static_cast<double>(m_channel.m_dataSentBySlot[k].size());
 					const double prob = p/(2.0*static_cast<double>(m_channel.m_dataSentBySlot[k].size()));
 					std::bernoulli_distribution bernoulli(prob);
 					if (static_cast<bool>(bernoulli(*pRandomGenerator))){
@@ -314,7 +310,6 @@ int SimulationEnvironment<MyData>::process(){
 							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
 						} 
 					} 
-
 				}
 			}
 			i++;
@@ -335,30 +330,20 @@ int SimulationEnvironment<MyData>::process(){
 
 					MyData* data  = std::get<1>(m_channel.m_currentlyReceivingFromList[id_v].at(chosenPosition));
 					m_pAgents[id_v]->receive_data(chosenSender, k, *data);
-
-
 				}
-
 			} 	
-
 		}
-
 
 		//postprocessing phase
 		for (unsigned int i = 0; i< m_numberOfAgents; i++){
 			m_pAgents.at(i)->post_process();
 		} 
-
-
-			
-
 	} 
 	
 	return 0;
 }
 // Add compatibility check of MyAgent and MyData
 template <class MyAgent, class MyData, int maxNumberOfAgents>
-//template <class MyAgent, class MyData, int n>
 class SEMemory{
 	public:
 		MyAgent m_agentMemory[maxNumberOfAgents];
@@ -366,25 +351,32 @@ class SEMemory{
 		std::vector<Agent<MyData>*> m_pAgents;
 		const unsigned int m_numberOfAgents;
 		NetworkChannel<MyData> m_channel;
-		double m_beaconFreq;           
+ 		SimulationEnvironment<Data>* m_simMem;
+		double m_beaconFreq;          
 
-		SEMemory(const unsigned int numberOfAgents, SINR::Fading& fading, const unsigned int numberOfSlots, const int slotSeed, const double beaconFreq) : m_numberOfAgents(numberOfAgents), m_channel(NetworkChannel<MyData>(fading, numberOfAgents, numberOfSlots, slotSeed)), m_beaconFreq(beaconFreq){
+		SEMemory(const unsigned int numberOfAgents, SINR::Fading& fading, const unsigned int numberOfSlots, const int slotSeed, const double beaconFreq) : m_numberOfAgents(numberOfAgents), m_channel(NetworkChannel<MyData>(fading, numberOfAgents, numberOfSlots, slotSeed)), m_simMem(nullptr), m_beaconFreq(beaconFreq){
 				assert(m_numberOfAgents <= maxNumberOfAgents);
 				if (m_numberOfAgents > maxNumberOfAgents){
 					std::cerr << "numberOfAgents must not exceed maxNumberOfAgents" << std::endl;
 					exit(1);
 				}
 		}; 
- 
-       	SimulationEnvironment<Data> create(){
+                ~SEMemory(){
+			if (m_simMem != nullptr){
+				delete m_simMem;
+			}
+		}
+                                                                                                                                                                                              
+
+       	SimulationEnvironment<Data>* create(){
             for (unsigned int i = 0; i < m_numberOfAgents; i++){
+				m_dataMemory[i].init({0.0, 0.0, 0.0});
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
-			}
-            
-			return SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
+			} 
+			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
+			return m_simMem;
 		}
-		
 };
 
 template <class TheData>
@@ -452,15 +444,7 @@ template <class TheData>
 int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(AgentID receiver){
 	size_t len = m_currentlyReceivingFromList[receiver].size();
 
-	//std::cout << "cnt = ";
-	//std::cout << cnt << std::endl;
 	if (len >= 1){
-		if (len> 1){
-			//CNT++;
-			//std::cerr << "len = ";
-			//std::cerr << len << std::endl;
-		}
-
 		return rand()%len;
 	}	
 	else if (len == 0){
@@ -482,7 +466,6 @@ void NetworkChannel<TheData>::send(const AgentID sendingAgent, const SlotNumber 
 	assert(sendingAgent <= m_numberOfAgents);
 	assert(slot <= m_numberOfSlots);
 
-	//m_dataSentBySlot[slot].push_back(std::make_tuple(sendingAgent, data));
 	m_dataSentBySlot[slot].push_back(std::make_tuple(sendingAgent, TheData(data)));
 	
 }
@@ -492,7 +475,6 @@ std::vector<AgentID> NetworkChannel<TheData>::get_sending_agents_by_slot(SlotNum
 	std::vector<AgentID> ret;
 
 	for (auto v : m_dataSentBySlot[k]){
-		//const typename NetworkChannel<TheData>::AgentID sendingAgent = std::get<0>(v);
 		ret.push_back(std::get<0>(v));
 	}
 	return ret;

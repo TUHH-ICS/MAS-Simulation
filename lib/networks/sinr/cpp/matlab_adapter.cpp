@@ -4,6 +4,7 @@
 #include "mexAdapter.hpp"
 
 #include "min_example.hpp"
+#include <time.h>
 
 using matlab::mex::ArgumentList;
 
@@ -25,8 +26,11 @@ private:
     
     // Would both be better if we use std::optional -> requires C++17
     std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>> memory;
-    std::unique_ptr<SimulationEnvironment<Data>> sim;
-    
+    SimulationEnvironment<Data>* pSim;
+    std::unique_ptr<SINR::WirelessProtocol802_11p> wp;
+    std::unique_ptr<SINR::Fading::PowerVec> powerVec;
+    std::unique_ptr<SINR::NakagamiFading> fading;    
+
     // Required for printing error messages in Matlab
     std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
     
@@ -58,7 +62,12 @@ private:
     }
     
 public:
-   
+    MexFunction() : pSim(nullptr){}; 
+    
+    SimulationEnvironment<Data>* get_sim(){
+	    return pSim;
+    }
+    
     void operator()(ArgumentList outputs, ArgumentList inputs) {
 	/******************
 	 *   Assumes *inputs* is of the following form:
@@ -74,13 +83,13 @@ public:
         switch(call) {
             case MethodCall::Constructor:
             {
-             /* ***************
+            /* ***************
              *
-             * Assumes input[1][0] is double 
+             * Assumes input[1][0] is unsigned int
              *
              * ****/ 
 
-                double numberOfAgents = inputs[1][0];
+                unsigned int numberOfAgents = inputs[1][0];
                 
                 // Check if the number of agents is in the valid range
                 if( numberOfAgents < 1 || MAX_AGENTS < numberOfAgents ) {
@@ -88,33 +97,37 @@ public:
                     break;
                 }
 
-                const int numberOfSlots = 5;
+                unsigned int seed = time(NULL);
+                unsigned int fadingSeed = seed;
+                unsigned int slotSeed = seed;
                 const double pathLoss = 2.0;
                 const double nakagamiParameter = 2.0;
-                const double mW = 0.001;
-                const double power = 500.0 * mW;
-                SINR::WirelessProtocol802_11p wp;
-                SINR::Fading::PowerVec powerVec(numberOfAgents, power);
-                SINR::NakagamiFading fading(numberOfAgents, 0, powerVec, wp, pathLoss, nakagamiParameter);  
-                               
+                constexpr int maxNumberOfAgents = 100;
+                const int numberOfSlots = 5;
+
                 const unsigned int dataSize = 400 * 6 * 64; // [bit]
                 const double relBitrate = 0.4 * numberOfSlots;
-                const double bitrate = relBitrate * wp.m_channelCapacity;
-                wp.set_bitrate(bitrate);
+                const double mW = 0.001;
+                const double power = 500.0 * mW;
+                wp = std::unique_ptr<SINR::WirelessProtocol802_11p>(new SINR::WirelessProtocol802_11p);
+                powerVec = std::unique_ptr<SINR::Fading::PowerVec>(new SINR::Fading::PowerVec(numberOfAgents, power)); 
+                fading = std::unique_ptr<SINR::NakagamiFading>(new SINR::NakagamiFading(numberOfAgents, fadingSeed, *powerVec, *wp, pathLoss, nakagamiParameter));  	 
+
+                const double bitrate = relBitrate * wp->m_channelCapacity;
+                wp->set_bitrate(bitrate);
                 const double beaconFrequency = bitrate/(dataSize * numberOfSlots); 
-                
-                memory = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, fading, numberOfSlots, 0, beaconFrequency));
-                
+
+                memory = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
+
                 // Create a simulation environment with the correct number of agents
-                SimulationEnvironment<Data> env = memory->create();
-                sim = std::unique_ptr<SimulationEnvironment<Data>>(new SimulationEnvironment<Data>(env));
-                
+                pSim = memory->create();
+
                 break;
             }
             case MethodCall::Destructor:
             {
+                //ToDo: add remaining destructor calls 
                 memory = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>();
-                sim = std::unique_ptr<SimulationEnvironment<Data>>();
 
                 break;
             }
@@ -128,7 +141,7 @@ public:
              *
              * ****/
 
-                if (!memory || !sim) {
+                if (!memory || pSim == nullptr) {
                     error("You must initialize the network first!");
                     break;
                 }
@@ -156,13 +169,13 @@ public:
                 }
 
                 // update agent's position
-                sim->m_pAgents[id - 1]->set_pos(setVec);
-  
+                pSim->m_pAgents.at(id-1)->set_pos(setVec);
+                
                 break;
             }
             case MethodCall::Process:
             {
-                sim->process();
+                pSim->process();
                 break;
             }
             case MethodCall::UpdateMatlabAgent:
@@ -173,7 +186,7 @@ public:
              * 	input[1][0] is unsigned int  (the agent id)
              *
              * ****/ 
-                if (!memory || !sim) {
+                if (!memory || pSim == nullptr) {
                     error("You must initialize the network first!");
                     break;
                 }
@@ -184,9 +197,8 @@ public:
                 }
 
                 // Agent's ID
-                AgentID id = inputs[1][0]; 
-
-                std::vector<std::tuple<AgentID, SlotNumber> > receptionList = sim->m_pAgents[id - 1]->m_received_from;
+                AgentID id = inputs[1][0];               
+                std::vector<std::tuple<AgentID, SlotNumber> > receptionList = pSim->m_pAgents.at(id-1)->m_received_from;
 
                 // Maybe necessary to check size?!
                 // Create (m,2) Matlab Array, where *m* is the number of received messages. 
@@ -197,11 +209,18 @@ public:
                 for (auto &tuple : receptionList){
                     returnVec[i][0] = std::get<0>(tuple) + 1;
                     returnVec[i][1] = std::get<1>(tuple) + 1;
+
+                    i++;
                 }
                 outputs[0] = returnVec;
-
+                
                 break;
             }
+            case MethodCall::Invalid:
+            {
+                error("Invalid function call!");
+                break;
+            } 
         }
     }
 };
