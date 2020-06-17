@@ -15,8 +15,12 @@ classdef SinrNetwork < BaseNetwork
         recvMessages % Messages that were passed to the recipients
     end
     
+    properties(GetAccess = public, SetAccess = immutable)
+        config(1,1) SinrConfiguration
+    end
+    
     methods
-        function obj = SinrNetwork(agentCount)
+        function obj = SinrNetwork(config)
             %SINRNETWORK Construct an instance of this class
             %   Initializes the c++ network simulation library and the
             %   Matlab message storage.
@@ -28,11 +32,12 @@ classdef SinrNetwork < BaseNetwork
                 error('You must only create one instance of the SinrNetwork class at a time!')
             end
             
-            obj@BaseNetwork(agentCount)
+            obj@BaseNetwork(config.agentCount)
+            obj.config = config;
             
             % Initialize matlab message storage
-            obj.recvMessages = cell(agentCount,1);
-            obj.sendMessages = MessageBuffer(agentCount);
+            obj.recvMessages = cell(config.agentCount,1);
+            obj.sendMessages = MessageBuffer(config.agentCount);
             
             % Build C++ networking library if necessary
             buildSuccess = buildSinrMex();
@@ -42,7 +47,7 @@ classdef SinrNetwork < BaseNetwork
             
             % Initialize the networking library with the correct number of
             % agents.
-            callSinrNetwork('new', agentCount)
+            callSinrNetwork('new', config)
         end
         
         function delete(~)

@@ -20,6 +20,17 @@ enum MethodCall {
     Destructor,
 };
 
+/**
+ * Enum for wireless protocols that are defined in this library
+ */
+enum WirelessProtocolEnum {
+    wp_802_11n_mode_1,
+    wp_802_11n_mode_2,
+    wp_802_11p,
+    wp_802_15_4_europe,
+    Unknown,
+};
+
 class MexFunction : public matlab::mex::Function {
 private:
     static const unsigned MAX_AGENTS = 50;
@@ -27,7 +38,7 @@ private:
     // Would both be better if we use std::optional -> requires C++17
     std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>> memory;
     SimulationEnvironment<Data>* pSim;
-    std::unique_ptr<SINR::WirelessProtocol802_11p> wp;
+    std::unique_ptr<SINR::WirelessProtocolParameters> wp;
     std::unique_ptr<SINR::Fading::PowerVec> powerVec;
     std::unique_ptr<SINR::NakagamiFading> fading;    
 
@@ -45,6 +56,15 @@ private:
         if (name == "delete")              return MethodCall::Destructor;
         
         return MethodCall::Invalid;
+    }
+    
+    WirelessProtocolEnum parseProtocol(std::string name) const {
+        if (name == "wp_802_11n_mode_1")    return WirelessProtocolEnum::wp_802_11n_mode_1;
+        if (name == "wp_802_11n_mode_2")    return WirelessProtocolEnum::wp_802_11n_mode_2;
+        if (name == "wp_802_11p")           return WirelessProtocolEnum::wp_802_11p;
+        if (name == "wp_802_15_4_europe")   return WirelessProtocolEnum::wp_802_15_4_europe;
+        
+        return WirelessProtocolEnum::Unknown;
     }
     
     /**
@@ -85,39 +105,55 @@ public:
             {
             /* ***************
              *
-             * Assumes input[1][0] is unsigned int
+             * Assumes input[1] is SinrConfiguration object
              *
              * ****/ 
 
-                unsigned int numberOfAgents = inputs[1][0];
+                matlab::data::Array config(inputs[1]);
+                unsigned numberOfAgents = matlabPtr->getProperty(config, u"agentCount")[0];
+                unsigned numberOfSlots  = matlabPtr->getProperty(config, u"slotCount")[0];
+                unsigned dataSize       = matlabPtr->getProperty(config, u"packetSize")[0];
+                unsigned fadingSeed     = matlabPtr->getProperty(config, u"fadingSeed")[0];
+                unsigned slotSeed       = matlabPtr->getProperty(config, u"slotSeed")[0];
+                double   power          = matlabPtr->getProperty(config, u"power")[0];
+                double   pathLoss       = matlabPtr->getProperty(config, u"pathLoss")[0];
                 
                 // Check if the number of agents is in the valid range
                 if( numberOfAgents < 1 || MAX_AGENTS < numberOfAgents ) {
                     error("The number of agents must be between 1 and 50");
-                    break;
+                    return;
                 }
 
-                unsigned int seed = time(NULL);
-                unsigned int fadingSeed = seed;
-                unsigned int slotSeed = seed;
-                const double pathLoss = 2.0;
+                double temperature = matlabPtr->getProperty(config, u"temperature")[0];
+                matlab::data::EnumArray protocol(matlabPtr->getProperty(config, u"wirelessProtocol"));
+                
+                switch(parseProtocol(std::string(protocol[0]))){
+                    case WirelessProtocolEnum::wp_802_11n_mode_1:
+                        wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_11n_mode1(temperature));
+                        break;
+                    case WirelessProtocolEnum::wp_802_11n_mode_2:
+                        wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_11n_mode2(temperature));
+                        break;
+                    case WirelessProtocolEnum::wp_802_11p:
+                        wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_11p(temperature));
+                        break;
+                    case WirelessProtocolEnum::wp_802_15_4_europe:
+                        wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_15_4_europe(temperature));
+                        break;
+                    case WirelessProtocolEnum::Unknown:
+                        error("Unknown wireless protocol!");
+                        return;
+                }
+                
                 const double nakagamiParameter = 2.0;
-                constexpr int maxNumberOfAgents = 100;
-                const int numberOfSlots = 5;
-
-                const unsigned int dataSize = 400 * 6 * 64; // [bit]
                 const double relBitrate = 0.4 * numberOfSlots;
-                const double mW = 0.001;
-                const double power = 500.0 * mW;
-                wp = std::unique_ptr<SINR::WirelessProtocol802_11p>(new SINR::WirelessProtocol802_11p);
-                powerVec = std::unique_ptr<SINR::Fading::PowerVec>(new SINR::Fading::PowerVec(numberOfAgents, power)); 
-                fading = std::unique_ptr<SINR::NakagamiFading>(new SINR::NakagamiFading(numberOfAgents, fadingSeed, *powerVec, *wp, pathLoss, nakagamiParameter));  	 
-
                 const double bitrate = relBitrate * wp->m_channelCapacity;
-                wp->set_bitrate(bitrate);
                 const double beaconFrequency = bitrate/(dataSize * numberOfSlots); 
-
-                memory = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
+                
+                wp->set_bitrate(bitrate);
+                powerVec = std::unique_ptr<SINR::Fading::PowerVec>(new SINR::Fading::PowerVec(numberOfAgents, power)); 
+                fading   = std::unique_ptr<SINR::NakagamiFading>(new SINR::NakagamiFading(numberOfAgents, fadingSeed, *powerVec, *wp, pathLoss, nakagamiParameter));  	 
+                memory   = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
 
                 // Create a simulation environment with the correct number of agents
                 pSim = memory->create();

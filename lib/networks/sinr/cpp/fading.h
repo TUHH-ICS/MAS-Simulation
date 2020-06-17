@@ -95,11 +95,12 @@ class WirelessProtocol802_11n_mode1 : public WirelessProtocolParameters{
     :param temp: Temperature [K]
     */
 
+public:
 	WirelessProtocol802_11n_mode1(const double temperature) :  WirelessProtocolParameters(
-					2.4e9,   // 2.4 GHz
-                                 	288.8e6, // 288.8 Mbit/s
-                             		20e6,     // 20 MHz
-					temperature
+        2.4e9,   // 2.4 GHz
+        288.8e6, // 288.8 Mbit/s
+        20e6,     // 20 MHz
+        temperature
 	){}; 
 };
 class WirelessProtocol802_11n_mode2 : public WirelessProtocolParameters{
@@ -108,34 +109,36 @@ class WirelessProtocol802_11n_mode2 : public WirelessProtocolParameters{
     :param temp: Temperature [K]
     */
 
+public:
 	WirelessProtocol802_11n_mode2(const double temperature) :  WirelessProtocolParameters(
-					2.4e9,   // 2.4 GHz
-					600e6,   // 600 Mbit/s
-					 40e6,   // 40 MHz
-					temperature
+        2.4e9,   // 2.4 GHz
+        600e6,   // 600 Mbit/s
+         40e6,   // 40 MHz
+        temperature
 	){}; 
 };
 
 class WirelessProtocol802_11p: public WirelessProtocolParameters{
     	/*802.11 p */
 
-	public:
-		WirelessProtocol802_11p(const double temperature= 293 /* 20°C*/) :  WirelessProtocolParameters(
-			5.9e9,  // 5.9 GHz
-			27.0e6, // 27 Mbit/s
- 	                10e6,   // 10 MHz
-			temperature 
+public:
+    WirelessProtocol802_11p(const double temperature= 293 /* 20°C*/) :  WirelessProtocolParameters(
+        5.9e9,  // 5.9 GHz
+        27.0e6, // 27 Mbit/s
+        10e6,   // 10 MHz
+        temperature 
 
-		){};
+    ){};
 };
 
 class WirelessProtocol802_15_4_europe : public WirelessProtocolParameters{
 
+public:
 	WirelessProtocol802_15_4_europe(const double temperature) : WirelessProtocolParameters(
-						868e6, 				// 868 Mhz
-						20e3, 				// 20 kbit/s
-						(868.6 - 868.0)/1.0 * 1e6,   	// 600 kHz;
-						temperature
+        868e6, 				// 868 Mhz
+        20e3, 				// 20 kbit/s
+        (868.6 - 868.0)/1.0 * 1e6,   	// 600 kHz;
+        temperature
 	){}; 
 
 };
