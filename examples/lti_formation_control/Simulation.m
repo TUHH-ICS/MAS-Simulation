@@ -13,10 +13,10 @@ saveVideo = false;
 %% Network parameters
 agentCount = 5;    % Number of agents in the network
 dimension  = 3;    % Dimension of the space the agents move in
-dT         = 0.01; % Size of the simulation time steps
+dT         = 0.01; % Size of the simulation time steps [s]
+Tf         = 3;    % Simulation time [s]
 range      = 150;  % Range of the radio communication
 pTransmit  = 0.95; % Probability of successful transmission
-steps      = 300;  % Simulation time steps
 
 %% Initialize the network
 Network = IdealNetwork(agentCount, dT, dimension, range);
@@ -37,40 +37,43 @@ end
 Agents = [Agents{:}];
 
 %% Perform simulation
-pos_history = zeros(steps+1, dimension, agentCount);
-pos_history(1,:,:) = [Agents.position];
+% The main work of the simulation is performed by the SimulationManager. It
+% calls the agent and network routines in the desired frequency
+sim   = SimulationManager(Network, Agents);
+
+% Estimate the number of steps based on the final simulation time
+steps = sim.estimateSteps(Tf);
+
+% Preallocate storage for simulation results
+t_history   = zeros(steps, 1);
+pos_history = zeros(steps, dimension, agentCount);
+
+% Initialize remaining values for the simulation
+t = 0;
+k = 0;
+
+% Save start time of the simulation. We want to periodically print the
+% progress of the simulation.
+lastprint = posixtime(datetime('now'));
 
 tic
 % profile on
-for k = 1:steps
-    t = (k-1) * dT;
-    
-    % Perform a single time step for each agent. This includes evaluating
-    % the dynamic equations and the flocking protocol as well as sending
-    % its own position and velocity to the other agents as a message.
-    for agent = Agents
-        agent.step()
-        Network.updateAgent(agent)
-    end
-    
-    % Process sent messages in the network
-    recvMessages = Network.process();
-    
-    % Distribute transmitted messages among the agents
-    for agent = Agents
-        agent.receive(t, recvMessages{agent.id});
-    end
+while t < Tf
+    t = sim.step();
+    k = k + 1;
     
     % Save current position of all agents
-    pos_history(k+1,:,:) = [Agents.position];
-    
-    % Print status periodically
-    if rem(k, steps/100) == 0
-        fprintf('Simulation %3.5g%% finished\n', 100*k/steps)
+    t_history(k)       = t;
+    pos_history(k,:,:) = [Agents.position];
+
+    % Print progress every 2 seconds
+    if posixtime(datetime('now')) - lastprint >= 1
+        lastprint = posixtime(datetime('now'));
+        fprintf('Simulation %3.5g%% finished\n', 100*t/Tf)
     end
 end
 % profile viewer
-toc
+fprintf("Simulation completed in %.3g seconds!\n", toc);
 
 %% Animate simulation results
 figure()
@@ -90,7 +93,7 @@ else
     video = [];
 end
 
-for k = 1:steps+1
+for k = 1:steps
     pos = squeeze(pos_history(k,:,:));
     scatter3(pos(1,:), pos(2,:), pos(3,:))
     xlabel('x(t)')
@@ -116,16 +119,16 @@ end
 
 figure()
 subplot(311)
-plot(dT*(0:steps), x_pos)
+plot(t_history, x_pos)
 xlabel('Time t')
 ylabel('x(t)')
 
 subplot(312)
-plot(dT*(0:steps), y_pos)
+plot(t_history, y_pos)
 xlabel('Time t')
 ylabel('y(t)')
 
 subplot(313)
-plot(dT*(0:steps), z_pos)
+plot(t_history, z_pos)
 xlabel('Time t')
 ylabel('z(t)')
