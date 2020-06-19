@@ -21,7 +21,7 @@ classdef Message
                 % default instance. This happens for example during array
                 % construction, as you cannot specify parameters in that
                 % case.
-                obj.sender = -1;
+                obj.sender = NaN;
                 obj.data   = [];
             end
         end

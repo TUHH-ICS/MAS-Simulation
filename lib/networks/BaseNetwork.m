@@ -10,15 +10,17 @@ classdef(Abstract) BaseNetwork < handle
     
     properties(GetAccess = public, SetAccess = immutable)
         agentCount % Number of agents that the network supports
+        cycleTime  % Time between two calls to the process function
     end
     
     methods
-        function obj = BaseNetwork(agentCount)
+        function obj = BaseNetwork(agentCount, cycleTime)
             %BASENETWORK Construct an instance of this class.
             %   The number of agents that this network instance can support
             %   must be set here and cannot be changed later.
             
             obj.agentCount = agentCount;
+            obj.cycleTime  = cycleTime;
             
             % The ids are given out sequentially, starting with 1.
             obj.idCounter = 1;
@@ -41,27 +43,16 @@ classdef(Abstract) BaseNetwork < handle
         end
     end
     
-    methods(Abstract)
-        % Method that can be called by the agent implementations to send a
-        % message over the network. All messages are broadcasted in this
-        % framework, so there is no receiver
-        send(obj, agent, data)
-        
-        % Method that can be called by the agent implementations to receive
-        % messages from other agents. Every received message should only be
-        % returned once and is then dropped from the internal storage of
-        % the network.
-        messages = receive(obj, agent)
-        
-        % Method that must be called by each agent after it changed its
-        % position. This position data is required to determine the
-        % recipients of the messages.
-        setPosition(obj, agent, position)
+    methods(Abstract)       
+        % Method that must be called for each agent before the messages are
+        % processed. It updates the internal position the network saves for
+        % each agent, and if the agent wants to transmit a messages in this
+        % cycle.
+        updateAgent(obj, agent)
         
         % Method that gets called by the simulation framework. It should be
-        % used for processing all send messages and putting them in the
-        % corresponding receiving slot.
-        process(obj)
+        % used for processing all sent messages.
+        messages = process(obj)
     end
 end
 

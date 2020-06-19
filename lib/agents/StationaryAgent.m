@@ -16,23 +16,20 @@ classdef StationaryAgent < BaseAgent
     end
     
     methods     
-        function obj = StationaryAgent(network, dT, pos)
+        function obj = StationaryAgent(id, pos)
             %STATIONARYAGENT Construct an instance of this class
             
             % In case the constructor is called without arguments, provide
             % default values. For example, this happens when Matlab tries
             % to construct a default element for a BaseAgent array.
             if nargin == 0
-                network = [];
+                id = NaN;
             end
             if nargin <= 1
-                dT = -1;
-            end
-            if nargin <= 2
                 pos = 0;
             end
             
-            obj@BaseAgent(network, dT);
+            obj@BaseAgent(id, NaN);
             obj.x = pos;
         end
         
@@ -55,12 +52,12 @@ classdef StationaryAgent < BaseAgent
             value = zeros(size(obj.x));
         end
         
-        function step(obj)
-            % Drop received messages
-            obj.network.receive();
-            
-            % Execute BaseAgent step
-            obj.step@BaseAgent()
+        function step(~)
+            % Do nothing
+        end
+        
+        function receive(~, ~, ~)
+            % Do nothing
         end
     end
 end

@@ -8,12 +8,11 @@ classdef(Abstract) MatlabNetwork < BaseNetwork
 
     properties(GetAccess = public, SetAccess = protected)
         positions    % Positions of all agents in the network
-        sendMessages % Messages waiting to be processed in the network
-        recvMessages % Messages that were passed to the recipients
+        sentMessages % Messages waiting to be processed in the network
     end
     
     methods
-        function obj = MatlabNetwork(agentCount, dim)
+        function obj = MatlabNetwork(agentCount, cycleTime, dim)
             %MATLABNETWORK Construct an instance of this class
             %   The network needs several parameter to be correctly
             %   initialized.
@@ -21,38 +20,30 @@ classdef(Abstract) MatlabNetwork < BaseNetwork
             %   dim is the dimension of the space the agents move in
             
             % Initialize BaseNetwork properties
-            obj@BaseNetwork(agentCount);
+            obj@BaseNetwork(agentCount, cycleTime);
             
             % Allocate space to save agent positions
             obj.positions    = zeros(dim, agentCount);
             
             % Initial message buffers
-            % TODO It turns out that the simulation is slower if
-            % recvMessage is also switched from cell to MessageBuffer, this
-            % should be investigated.
-            obj.recvMessages = cell(agentCount,1);
-            obj.sendMessages = MessageBuffer(agentCount);
-        end
-                
-        function send(obj, agent, data)
-            % SEND Puts the message that is send by the agent into the
-            % processing queue.
-            
-            obj.sendMessages.put(Message(agent.id, data));
+            obj.sentMessages = MessageBuffer(agentCount);
         end
         
-        function messages = receive(obj, agent)
-            % RECEIVE Takes all messages, that were received by the agent
-            % and returns them. Each message is only returned once.
+        function updateAgent(obj, agent)
+            %UPDATEAGENT Updates the state of the agent, that is contained
+            %in the network.
+            %   This function updates the state of the agent, as it is seen
+            %   by the network. This includes the agent's position and if
+            %   it wants to transmit a message.
             
-            messages = obj.recvMessages{agent.id};
-            obj.recvMessages{agent.id} = [];
-        end
-        
-        function setPosition(obj, agent)
-            % SETPOSITION Updates the internal position of the agents
-            
+            % Update the position of the agent
             obj.positions(:, agent.id) = agent.position;
+            
+            % Check if the agent wants to transmit
+            msg = agent.getMessage();
+            if ~isempty(msg)
+                obj.sentMessages.put(msg);
+            end
         end
     end
 end
