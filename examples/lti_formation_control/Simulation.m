@@ -16,11 +16,11 @@ dimension  = 3;    % Dimension of the space the agents move in
 dT         = 0.01; % Size of the simulation time steps
 range      = 150;  % Range of the radio communication
 pTransmit  = 0.95; % Probability of successful transmission
-steps      = 500;  % Simulation time steps
+steps      = 300;  % Simulation time steps
 
 %% Initialize the network
-Network = IdealNetwork(agentCount, dimension, range);
-% Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
+Network = IdealNetwork(agentCount, dT, dimension, range);
+% Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
@@ -31,8 +31,8 @@ for i = 1:length(Agents)
     pos = 15 + 30 * (rand(dimension, 1) - 0.5);
     
     % Initialize an agent with the generated initial conditions
-%     Agents{i} = FormationAgent(Network, dT, pos, [i^2; 0; 0]);
-    Agents{i} = FormationQuadrotor(Network, dT, pos, [i^2; 0; 0]);
+%     Agents{i} = FormationAgent(Network.getId(), dT, pos, [i^2; 0; 0]);
+    Agents{i} = FormationQuadrotor(Network.getId(), dT, pos, [i^2; 0; 0]);
 end
 Agents = [Agents{:}];
 
@@ -43,15 +43,23 @@ pos_history(1,:,:) = [Agents.position];
 tic
 % profile on
 for k = 1:steps
+    t = (k-1) * dT;
+    
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.
     for agent = Agents
         agent.step()
+        Network.updateAgent(agent)
     end
     
-    % Distribute messages among the agents
-    Network.process()
+    % Process sent messages in the network
+    recvMessages = Network.process();
+    
+    % Distribute transmitted messages among the agents
+    for agent = Agents
+        agent.receive(t, recvMessages{agent.id});
+    end
     
     % Save current position of all agents
     pos_history(k+1,:,:) = [Agents.position];

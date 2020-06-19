@@ -31,12 +31,12 @@ classdef FormationAgent < BaseAgent
     end
     
     methods
-        function obj = FormationAgent(network, dT, initialPos, reference)
+        function obj = FormationAgent(id, dT, initialPos, reference)
             %FORMATIONAGENT Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
             
-            obj@BaseAgent(network, dT);
+            obj@BaseAgent(id, dT);
             
             % Define the mass friction system
             A = [ 1  dT                                       ;
@@ -110,9 +110,6 @@ classdef FormationAgent < BaseAgent
             data = struct;
             data.position = obj.position - obj.ref;
             obj.send(data)
-            
-            % Execute BaseAgent step
-            obj.step@BaseAgent()
         end
     end
 end

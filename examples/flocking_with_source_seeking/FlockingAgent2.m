@@ -29,11 +29,11 @@ classdef FlockingAgent2 < BaseAgent
     end
     
     methods     
-        function obj = FlockingAgent2(network, dT, initialPos, initialVel, conc_field,interac_field)
+        function obj = FlockingAgent2(id, dT, initialPos, initialVel, conc_field,interac_field)
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
-            obj@BaseAgent(network, dT);
+            obj@BaseAgent(id, dT);
             obj.x     = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
 			obj.conc_field=conc_field;
             obj.interac_field=interac_field;
@@ -105,9 +105,6 @@ classdef FlockingAgent2 < BaseAgent
             data.position = obj.position;
             data.velocity = obj.velocity;
             obj.send(data)
-            
-            % Execute BaseAgent step
-            obj.step@BaseAgent()
         end
     end
 end

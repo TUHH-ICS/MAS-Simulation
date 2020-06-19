@@ -23,8 +23,8 @@ pTransmit  = 0.95; % Probability of successful transmission
 steps      = 1000; % Simulation time steps
 
 %% Initialize the network
-% Network = IdealNetwork(agentCount, dimension, range);
-Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
+% Network = IdealNetwork(agentCount, dT, dimension, range);
+Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
@@ -40,32 +40,37 @@ for i = 1:length(Agents)
     vel = 0.01 * ([ 50; 50 ] - pos);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent(Network, dT, pos, vel);
+    Agents{i} = FlockingAgent(Network.getId(), dT, pos, vel);
 end
 Agents = [Agents{:}];
 
 %% Perform simulation
 pos_history = zeros(steps+1, dimension, agentCount);
-vel_history = zeros(steps+1, dimension, agentCount);
 pos_history(1,:,:) = [Agents.position];
-vel_history(1,:,:) = [Agents.velocity];
 
 tic
 % profile on
 for k = 1:steps
+    t = (k-1) * dT;
+    
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.
     for agent = Agents
         agent.step()
+        Network.updateAgent(agent)
     end
     
-    % Distribute messages among the agents
-    Network.process()
+    % Process sent messages in the network
+    recvMessages = Network.process();
+    
+    % Distribute transmitted messages among the agents
+    for agent = Agents
+        agent.receive(t, recvMessages{agent.id});
+    end
     
     % Save current position of all agents
     pos_history(k+1,:,:) = [Agents.position];
-    vel_history(k+1,:,:) = [Agents.velocity];
     
     % Print status periodically
     if rem(k, steps/100) == 0
@@ -94,8 +99,7 @@ end
 
 for k = 1:steps+1
     pos = squeeze(pos_history(k,:,:));
-    vel = squeeze(vel_history(k,:,:));
-    quiver(pos(1,:), pos(2,:), vel(1,:), vel(2,:), 'o', 'showArrowHead', true)
+    scatter(pos(1,:), pos(2,:))
     
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))

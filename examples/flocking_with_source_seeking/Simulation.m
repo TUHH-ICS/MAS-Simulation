@@ -35,8 +35,8 @@ conc_Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
 interac_field=OS_InteractionField();
 
 %% Initialize the network
-Network = IdealNetwork(agentCount, dimension, range);
-% Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
+Network = IdealNetwork(agentCount, dT, dimension, range);
+% Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
@@ -49,7 +49,7 @@ for i = 1:length(Agents)
     vel = 1 * (rand(dimension, 1) - 0.5);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent2(Network, dT, pos, vel,conc_Field,interac_field);
+    Agents{i} = FlockingAgent2(Network.getId(), dT, pos, vel, conc_Field, interac_field);
 end
 Agents = [Agents{:}];
 
@@ -68,21 +68,27 @@ Energy.V=zeros(1,steps);
 tic
 % profile on
 for k = 1:steps
+    t = (k-1) * dT;
+    
     % Perform a single time step for each agent. This includes evaluating
     % the dynamic equations and the flocking protocol as well as sending
     % its own position and velocity to the other agents as a message.
-    
     for agent = Agents        
         agent.step()
+        Network.updateAgent(agent)
     end
     
-    % Distribute messages among the agents
-    Network.process();
+    % Process sent messages in the network
+    recvMessages = Network.process();
     
     % Save current position of all agents
     pos_history(k+1,:,:) = [Agents.position];
     
-    for agent = Agents        
+    for agent = Agents
+        % Distribute transmitted messages among the agents
+        agent.receive(t, recvMessages{agent.id});
+        
+        % Calculate kinetic and source field energies
         Energy.KE(1,k)=Energy.KE(1,k)+0.5*norm(agent.velocity,2)^2;
         Energy.Vfield(1,k)=Energy.Vfield(1,k)+conc_Field.get_field_value_at(agent.position);        
         

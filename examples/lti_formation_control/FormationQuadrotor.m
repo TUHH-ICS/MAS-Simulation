@@ -20,12 +20,12 @@ classdef FormationQuadrotor < BaseAgent
     end
     
     methods
-        function obj = FormationQuadrotor(network, dT, initialPos, reference)
+        function obj = FormationQuadrotor(id, dT, initialPos, reference)
             %FORMATIONQUADROTOR Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
             
-            obj@BaseAgent(network, dT);
+            obj@BaseAgent(id, dT);
             
             % Import quadrotor model and controller
             data = load('quadrotor_model');
@@ -95,9 +95,6 @@ classdef FormationQuadrotor < BaseAgent
             data = struct;
             data.position = obj.position - obj.ref;
             obj.send(data)
-            
-            % Execute BaseAgent step
-            obj.step@BaseAgent()
         end
     end
 end
