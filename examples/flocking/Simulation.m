@@ -17,14 +17,14 @@ saveVideo = false;
 %% Network parameters
 agentCount = 50;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.1;  % Size of the simulation time steps
+dT         = 0.1;  % Size of the simulation time steps [s]
+Tf         = 100;  % Simulation time [s]
 range      = 6;    % Range of the radio communication
 pTransmit  = 0.95; % Probability of successful transmission
-steps      = 1000; % Simulation time steps
 
 %% Initialize the network
-% Network = IdealNetwork(agentCount, dimension, range);
-Network = BernoulliNetwork(agentCount, dimension, range, pTransmit);
+% Network = IdealNetwork(agentCount, dT, dimension, range);
+Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
 
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
@@ -40,40 +40,48 @@ for i = 1:length(Agents)
     vel = 0.01 * ([ 50; 50 ] - pos);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent(Network, dT, pos, vel);
+    Agents{i} = FlockingAgent(Network.getId(), dT, pos, vel);
 end
 Agents = [Agents{:}];
 
 %% Perform simulation
-pos_history = zeros(steps+1, dimension, agentCount);
-vel_history = zeros(steps+1, dimension, agentCount);
-pos_history(1,:,:) = [Agents.position];
-vel_history(1,:,:) = [Agents.velocity];
+% The main work of the simulation is performed by the SimulationManager. It
+% calls the agent and network routines in the desired frequency
+sim   = SimulationManager(Network, Agents);
+
+% Estimate the number of steps based on the final simulation time
+steps = sim.estimateSteps(Tf);
+
+% Preallocate storage for simulation results
+t_history   = zeros(steps, 1);
+pos_history = zeros(steps, dimension, agentCount);
+
+% Initialize remaining values for the simulation
+t = 0;
+k = 0;
+
+% Save start time of the simulation. We want to periodically print the
+% progress of the simulation.
+lastprint = posixtime(datetime('now'));
 
 tic
 % profile on
-for k = 1:steps
-    % Perform a single time step for each agent. This includes evaluating
-    % the dynamic equations and the flocking protocol as well as sending
-    % its own position and velocity to the other agents as a message.
-    for agent = Agents
-        agent.step()
-    end
-    
-    % Distribute messages among the agents
-    Network.process()
+while t < Tf
+    t = sim.step();
+    k = k + 1;
     
     % Save current position of all agents
-    pos_history(k+1,:,:) = [Agents.position];
-    vel_history(k+1,:,:) = [Agents.velocity];
-    
-    % Print status periodically
-    if rem(k, steps/100) == 0
-        fprintf('Simulation %3.5g%% finished\n', 100*k/steps)
+    t_history(k)       = t;
+    pos_history(k,:,:) = [Agents.position];
+
+    % Print progress every 2 seconds
+    if posixtime(datetime('now')) - lastprint >= 1
+        lastprint = posixtime(datetime('now'));
+        fprintf('Simulation %3.5g%% finished\n', 100*t/Tf)
     end
 end
 % profile viewer
-toc
+fprintf("Simulation completed in %.3g seconds!\n", toc);
 
 %% Animate simulation results
 figure()
@@ -92,10 +100,9 @@ else
     video = [];
 end
 
-for k = 1:steps+1
+for k = 1:steps
     pos = squeeze(pos_history(k,:,:));
-    vel = squeeze(vel_history(k,:,:));
-    quiver(pos(1,:), pos(2,:), vel(1,:), vel(2,:), 'o', 'showArrowHead', true)
+    scatter(pos(1,:), pos(2,:))
     
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))

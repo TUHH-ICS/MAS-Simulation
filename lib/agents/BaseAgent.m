@@ -5,21 +5,18 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     %   as it defines the basis properties, that are required during
     %   simulation.
     
-    properties(GetAccess = public, SetAccess = private)
-        t        % Current simulation time
-    end
-    
     properties(GetAccess = public, SetAccess = immutable)
-        id       % Number that uniquely identifies the agent in the network
-        dT       % Time between to calls to the step function
+        id         % Number that uniquely identifies the agent in the network
+        dT         % Time between to calls to the step function
     end
     
-    properties(GetAccess = private, SetAccess = immutable)
-        network  % Pointer to the network object, for sending and receiving
+    properties(GetAccess = private, SetAccess = private)
+        dataToSend % Saves the data the agent wants to transmitt until the networks fetches it
+        messages   % Buffer for received messages of this agent
     end
-    
+
     properties(Dependent, GetAccess = public, SetAccess = immutable)
-        order    % Dynamic order, dimension of the state space of the agent
+        order      % Dynamic order, dimension of the state space of the agent
     end
     
     properties(Abstract, Dependent, GetAccess = public, SetAccess = private)
@@ -39,55 +36,71 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
     end
     
     methods
-        function obj = BaseAgent(network, dT)
+        function obj = BaseAgent(id, dT)
             %BASEAGENT Construct an instance of this class
             %   network is a reference to the network object.
             %   dT is the time between two simulation steps
-            
-            obj.network = network;
-            obj.t       = 0;
-            obj.dT      = dT;
-            
-            % Test if a correct network implementation was handed in
-            if isa(network, 'BaseNetwork')
-                obj.id  = network.getId(); % Aquire unique id
-            end
+
+            obj.id = id;
+            obj.dT = dT;
         end
         
         function value = get.order(obj)
             %GET.ORDER Implementation of the dependent property order
+            
             value = size(obj.state, 1);
         end
         
-        function step(obj)
-            %STEP Function that gets called at each simulation step
-            %   All agent implementations should override this method to
-            %   implement agent specific behaviour, such as the dynamics
-            %   and the network interactions.
-            %   
-            %   You should call the superclass method at the end of your
-            %   custom implementation
+        function msgs = receive(obj, ~, msgs)
+            %RECEIVE Function that agent implementation can call to receive
+            %messages from other agents in the network.
+            %   This default implementation is meant to be used if the
+            %   agent only processes messages in its own step function. If
+            %   processing between steps is required, you must override
+            %   this function.
             
-            % Update agent position in the network. This is independent of
-            % sending a message that may contain the agent position.
-            obj.network.setPosition(obj);
-            
-            % Update current simulation time
-            obj.t = obj.t + obj.dT;
+            if nargin > 1 && nargout == 0
+                obj.messages = [ obj.messages, msgs ];
+            elseif nargin <= 1 && nargout > 0
+                msgs         = obj.messages;
+                obj.messages = [];
+            else
+                error('You must have either inputs or an output!')
+            end            
         end
     end
     
-    methods(Sealed, Access = protected)
+    methods(Abstract)
+        %STEP Function that gets called at each simulation step
+        %   All agent implementations should override this method to
+        %   implement agent specific behaviour, such as the dynamics
+        %   and the network interactions.
+        step(obj)
+    end
+
+    methods(Access = protected)
         function send(obj, data)
             %SEND Function that the agent implementations can call to send
             %data over the network
-            obj.network.send(obj, data)
+            %   The data is not send immediately, but stored until the
+            %   network requests it.
+            
+            obj.dataToSend = data;
         end
-        
-        function messages = receive(obj)
-            %RECEIVE Function that agent implementation can call to receive
-            %messages from other agents in the network
-            messages = obj.network.receive(obj);
+    end
+    
+    methods(Access = ?BaseNetwork)
+        function message = getMessage(obj)
+            %GETMESSAGE Function that returns the message that this agent
+            %wants to send.
+            %   If no data is to be sent, the reponse is empty.
+            
+            if isempty(obj.dataToSend)
+                message = [];
+            else
+                message = Message(obj.id, obj.dataToSend);
+                obj.dataToSend = [];
+            end
         end
     end
     
@@ -95,6 +108,7 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
         function default_object = getDefaultScalarElement()
             %GETDEFAULTSCALARELEMENT Provides a default element for Matlab
             %to place in newly created arrays of BaseAgents.
+            
             default_object = StationaryAgent;
         end
     end

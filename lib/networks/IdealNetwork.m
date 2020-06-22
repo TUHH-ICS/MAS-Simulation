@@ -12,7 +12,7 @@ classdef IdealNetwork < MatlabNetwork
     end
        
     methods
-        function obj = IdealNetwork(agentCount, dim, range)
+        function obj = IdealNetwork(agentCount, cycleTime, dim, range)
             %IDEALNETWORK Construct an instance of this class
             %   The network needs several parameter to be correctly
             %   initialized.
@@ -21,25 +21,25 @@ classdef IdealNetwork < MatlabNetwork
             %   range is the communication range
             
             % Initialize MatlabNetwork properties
-            obj@MatlabNetwork(agentCount, dim);
+            obj@MatlabNetwork(agentCount, cycleTime, dim);
             
             obj.range = range;
         end
                 
-        function process(obj) 
+        function recvMessages = process(obj) 
             %PROCESS Processes all messages that were send by the agents
             %since the last call.
             %   The messages get broadcasted to all agents in the receiving
             %   range.
             
-            messages = obj.sendMessages.getAll();
+            sentMessages = obj.sentMessages.takeAll();
             
             % Exclude the possibility of agents sending to themselves
-            filter = ~eye(length(messages), obj.agentCount, 'logical');
+            filter = ~eye(length(sentMessages), obj.agentCount, 'logical');
             
             % Compute the recipients of each message
-            for i = 1:length(messages)
-                pos_sender = obj.positions(:, messages(i).sender);
+            for i = 1:length(sentMessages)
+                pos_sender = obj.positions(:, sentMessages(i).sender);
                 
                 % Calculate the distance from the sender to all agents
                 dist = vecnorm(pos_sender - obj.positions);
@@ -49,12 +49,10 @@ classdef IdealNetwork < MatlabNetwork
             end
             
             % Copy all received messages in the receiving buffers
+            recvMessages = cell(obj.agentCount,1);
             for i = 1:obj.agentCount
-                obj.recvMessages{i} = [ obj.recvMessages{i}, messages(filter(:,i)) ];
+                recvMessages{i} = sentMessages(filter(:,i));
             end
-            
-            % All sent messages were processed, so clear the queue
-            obj.sendMessages.clear();
         end
     end
 end

@@ -11,7 +11,7 @@ classdef BernoulliNetwork < MatlabNetwork
     end
     
     methods
-        function obj = BernoulliNetwork(agentCount, dim, range, p)
+        function obj = BernoulliNetwork(agentCount, cycleTime, dim, range, p)
             %BERNOULLINETWORK Construct an instance of this class
             %   The network needs several parameter to be correctly
             %   initialized.
@@ -21,26 +21,27 @@ classdef BernoulliNetwork < MatlabNetwork
             %   p is the probability of a successful transmission
             
             % Initialize MatlabNetwork properties
-            obj@MatlabNetwork(agentCount, dim);
+            obj@MatlabNetwork(agentCount, cycleTime, dim);
             
             obj.range = range;
             obj.p     = p;
         end
         
-        function process(obj) 
+        function recvMessages = process(obj) 
             %PROCESS Processes all messages that were send by the agents
             %since the last call.
             %   The messages get broadcasted to all agents in the receiving
-            %   range.
+            %   range. Some percentage of the messages gets dropped
+            %   randomly.
             
-            messages = obj.sendMessages.getAll();
+            sentMessages = obj.sentMessages.takeAll();
             
             % Exclude the possibility of agents sending to themselves
-            filter = ~eye(length(messages), obj.agentCount, 'logical');
+            filter = ~eye(length(sentMessages), obj.agentCount, 'logical');
             
             % Compute the recipients of each message
-            for i = 1:length(messages)
-                pos_sender = obj.positions(:, messages(i).sender);
+            for i = 1:length(sentMessages)
+                pos_sender = obj.positions(:, sentMessages(i).sender);
                 
                 % Calculate the distance from the sender to all agents
                 dist = vecnorm(pos_sender - obj.positions);
@@ -53,12 +54,10 @@ classdef BernoulliNetwork < MatlabNetwork
             filter = filter & (rand(size(filter)) <= obj.p);
             
             % Copy all received messages in the receiving buffers
+            recvMessages = cell(obj.agentCount,1);
             for i = 1:obj.agentCount
-                obj.recvMessages{i} = [ obj.recvMessages{i}, messages(filter(:,i)) ];
+                recvMessages{i} = sentMessages(filter(:,i));
             end
-            
-            % All sent messages were processed, so clear the queue
-            obj.sendMessages.clear();
         end
     end
 end
