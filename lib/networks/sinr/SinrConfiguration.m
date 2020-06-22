@@ -1,4 +1,4 @@
-classdef SinrConfiguration
+classdef SinrConfiguration < handle
     %SINRCONFIGURATION Class that bundles all configuration options of the
     %SinrNetwork.
     
@@ -9,11 +9,14 @@ classdef SinrConfiguration
         % Number of slots that are available for the agents to communicate
         slotCount(1,1) {mustBeInteger, mustBePositive} = 5
         
+        % Duration of one sending cycle
+        cycleTime(1,1) {mustBeFinite, mustBePositive} = 1
+        
         % Size of the data packets [Bit]
         packetSize(1,1) {mustBeInteger, mustBePositive} = 6 * 64;
         
         % Temperature of the environment [K]
-        temperature(1,1) {mustBePositive} = 293.15 % 20° C
+        temperature(1,1) {mustBeFinite, mustBePositive} = 293.15 % 20° C
         
         % Wireless protocol that is used for the transmission
         wirelessProtocol(1,1) WirelessProtocol = WirelessProtocol.wp_802_11n_mode_1
@@ -29,6 +32,10 @@ classdef SinrConfiguration
         slotSeed(1,1) uint32 = randi(intmax('uint32'))
     end
     
+    properties(Dependent)
+       slotTime(1,1) {mustBeFinite, mustBePositive} 
+    end
+    
     methods
         function obj = SinrConfiguration(agentCount)
             %SINRCONFIGURATION Construct an instance of this class
@@ -37,6 +44,20 @@ classdef SinrConfiguration
                 obj.agentCount = agentCount;
                 obj.slotCount  = agentCount;
             end
+        end
+        
+        function value = get.slotTime(obj)
+            %GET.SLOTTIME Getter implementation of the dependent property
+            %slotTime.
+            
+            value = obj.cycleTime / obj.slotCount;
+        end
+        
+        function set.slotTime(obj, value)
+            %SET.SLOTTIME Setter implementation of the dependent property
+            %slotTime.
+            
+            obj.cycleTime = obj.slotCount * value;
         end
     end
 end

@@ -11,8 +11,7 @@ classdef SinrNetwork < BaseNetwork
     %   this state.
     
     properties(GetAccess = public, SetAccess = protected)
-        sendMessages % Messages waiting to be processed in the network
-        recvMessages % Messages that were passed to the recipients
+        sentMessages % Messages waiting to be processed in the network
     end
     
     properties(GetAccess = public, SetAccess = immutable)
@@ -32,12 +31,11 @@ classdef SinrNetwork < BaseNetwork
                 error('You must only create one instance of the SinrNetwork class at a time!')
             end
             
-            obj@BaseNetwork(config.agentCount)
+            obj@BaseNetwork(config.agentCount, config.slotTime)
             obj.config = config;
             
             % Initialize matlab message storage
-            obj.recvMessages = cell(config.agentCount,1);
-            obj.sendMessages = MessageBuffer(config.agentCount);
+            obj.sentMessages = MessageBuffer(config.agentCount);
             
             % Build C++ networking library if necessary
             buildSuccess = buildSinrMex();
@@ -62,29 +60,24 @@ classdef SinrNetwork < BaseNetwork
             SinrNetwork.setGetLock(false);
         end
         
-        function send(obj, agent, data)
-            % SEND Puts the message that is send by the agent into the
-            % processing queue.
-            
-            obj.sendMessages.put(Message(agent.id, data));
-        end
-        
-        function messages = receive(obj, agent)
-            % RECEIVE Takes all messages, that were received by the agent
-            % and returns them. Each message is only returned once.
-            
-            messages = obj.recvMessages{agent.id};
-            obj.recvMessages{agent.id} = [];
-        end
-        
-        function setPosition(~, agent)
-            % SETPOSITION Updates the internal position of the agents
+        function updateAgent(obj, agent)
+            %UPDATEAGENT Updates the state of the agent, that is contained
+            %in the network.
+            %   This function updates the state of the agent, as it is seen
+            %   by the network. This includes the agent's position and if
+            %   it wants to transmit a message.
             
             % Call into the C++ library to update the agent positions
             callSinrNetwork('updateNetworkAgent', agent.id, agent.position)
+            
+            % Check if the agent wants to transmit
+            msg = agent.getMessage();
+            if ~isempty(msg)
+                obj.sentMessages.put(msg);
+            end
         end
         
-        function process(obj)
+        function recvMessages = process(obj)
             %PROCESS Processes all messages that were send by the agents
             %since the last call.
             %   The messages get processed in the C++ library using the
@@ -96,9 +89,10 @@ classdef SinrNetwork < BaseNetwork
             % transmitted messages.
             callSinrNetwork('process')
             
-            messages = obj.sendMessages.getAll();
+            messages = obj.sentMessages.takeAll();
             senders  = [messages.sender];
             
+            recvMessages = cell(obj.agentCount,1);
             for i = 1:obj.agentCount
                 % Call into the C++ library to check which messages where
                 % received by agent i in which slot.
@@ -111,11 +105,8 @@ classdef SinrNetwork < BaseNetwork
                 
                 % Collect all received messages based on the sender
                 mask = any(senders == vec(:, 1));
-                obj.recvMessages{i} = [ obj.recvMessages{i}, messages(mask) ];
+                recvMessages{i} = messages(mask);
             end
-            
-            % All sent messages were processed, so clear the queue
-            obj.sendMessages.clear();
         end
     end
     
