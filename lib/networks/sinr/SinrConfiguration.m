@@ -1,4 +1,4 @@
-classdef SinrConfiguration < handle
+classdef SinrConfiguration < matlab.mixin.Copyable
     %SINRCONFIGURATION Class that bundles all configuration options of the
     %SinrNetwork.
     
@@ -37,15 +37,6 @@ classdef SinrConfiguration < handle
     end
     
     methods
-        function obj = SinrConfiguration(agentCount)
-            %SINRCONFIGURATION Construct an instance of this class
-            
-            if nargin >= 1
-                obj.agentCount = agentCount;
-                obj.slotCount  = agentCount;
-            end
-        end
-        
         function value = get.slotTime(obj)
             %GET.SLOTTIME Getter implementation of the dependent property
             %slotTime.

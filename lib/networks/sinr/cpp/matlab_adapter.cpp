@@ -6,6 +6,11 @@
 #include "min_example.hpp"
 #include <time.h>
 
+// BUILD_VERSION gets set via a compiler argument to the Matlab mex function
+#ifndef BUILD_VERSION
+    #define BUILD_VERSION -1
+#endif
+
 using matlab::mex::ArgumentList;
 
 /**
@@ -18,6 +23,7 @@ enum MethodCall {
     Process,
     UpdateMatlabAgent,
     Destructor,
+    BuildVersion,
 };
 
 /**
@@ -54,6 +60,7 @@ private:
         if (name == "process")             return MethodCall::Process;
         if (name == "updateMatlabAgent")   return MethodCall::UpdateMatlabAgent;
         if (name == "delete")              return MethodCall::Destructor;
+        if (name == "buildVersion")        return MethodCall::BuildVersion;
         
         return MethodCall::Invalid;
     }
@@ -115,6 +122,7 @@ public:
                 unsigned dataSize       = matlabPtr->getProperty(config, u"packetSize")[0];
                 unsigned fadingSeed     = matlabPtr->getProperty(config, u"fadingSeed")[0];
                 unsigned slotSeed       = matlabPtr->getProperty(config, u"slotSeed")[0];
+                double   cycleTime      = matlabPtr->getProperty(config, u"cycleTime")[0];
                 double   power          = matlabPtr->getProperty(config, u"power")[0];
                 double   pathLoss       = matlabPtr->getProperty(config, u"pathLoss")[0];
                 
@@ -145,12 +153,11 @@ public:
                         return;
                 }
                 
-                const double nakagamiParameter = 2.0;
-                const double relBitrate = 0.4 * numberOfSlots;
-                const double bitrate = relBitrate * wp->m_channelCapacity;
-                const double beaconFrequency = bitrate/(dataSize * numberOfSlots); 
-                
+                const double nakagamiParameter = 2.0;                
+                const double beaconFrequency = 1 / cycleTime;
+                const double bitrate = beaconFrequency * dataSize * numberOfSlots;
                 wp->set_bitrate(bitrate);
+                
                 powerVec = std::unique_ptr<SINR::Fading::PowerVec>(new SINR::Fading::PowerVec(numberOfAgents, power)); 
                 fading   = std::unique_ptr<SINR::NakagamiFading>(new SINR::NakagamiFading(numberOfAgents, fadingSeed, *powerVec, *wp, pathLoss, nakagamiParameter));  	 
                 memory   = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
@@ -249,6 +256,17 @@ public:
                     i++;
                 }
                 outputs[0] = returnVec;
+                
+                break;
+            }
+            case MethodCall::BuildVersion:
+            {
+                if (outputs.size() != 1) {
+                    error("You must specify exactly one output");
+                    break;
+                }
+                
+                outputs[0] = factory.createScalar<int>(BUILD_VERSION);
                 
                 break;
             }

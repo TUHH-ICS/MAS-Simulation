@@ -31,8 +31,11 @@ classdef SinrNetwork < BaseNetwork
                 error('You must only create one instance of the SinrNetwork class at a time!')
             end
             
-            obj@BaseNetwork(config.agentCount, config.slotTime)
-            obj.config = config;
+            obj@BaseNetwork(config.agentCount, config.cycleTime)
+            
+            % Ensure that the configuration is not changed from the outside
+            % after the creation of the network
+            obj.config = copy(config);
             
             % Initialize matlab message storage
             obj.sentMessages = MessageBuffer(config.agentCount);
@@ -91,21 +94,23 @@ classdef SinrNetwork < BaseNetwork
             
             messages = obj.sentMessages.takeAll();
             senders  = [messages.sender];
-            
             recvMessages = cell(obj.agentCount,1);
-            for i = 1:obj.agentCount
-                % Call into the C++ library to check which messages where
-                % received by agent i in which slot.
-                %
-                % Each row of vec represents a received messages. The first
-                % column contains the id of the sender, the second column
-                % the slot in which the message was received. At the
-                % moment, the slot information is ignored.
-                vec = callSinrNetwork('updateMatlabAgent', i);
-                
-                % Collect all received messages based on the sender
-                mask = any(senders == vec(:, 1));
-                recvMessages{i} = messages(mask);
+            
+            if ~isempty(messages)
+                for i = 1:obj.agentCount
+                    % Call into the C++ library to check which messages where
+                    % received by agent i in which slot.
+                    %
+                    % Each row of vec represents a received messages. The first
+                    % column contains the id of the sender, the second column
+                    % the slot in which the message was received. At the
+                    % moment, the slot information is ignored.
+                    vec = callSinrNetwork('updateMatlabAgent', i);
+
+                    % Collect all received messages based on the sender
+                    mask = any(senders == vec(:, 1));
+                    recvMessages{i} = messages(mask);
+                end
             end
         end
     end

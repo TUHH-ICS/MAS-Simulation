@@ -15,8 +15,32 @@ if nargin < 1
     forceBuild = false;
 end
 
+% Read the path of this file. Is required to assemble the path to the
+% *.cpp files and the build directory.
+[localPath,~,~] = fileparts(mfilename('fullpath'));
+outdir  = fullfile(localPath, '..', '..', '..', 'build');
+indir   = fullfile(localPath, 'cpp');
+infiles = fullfile(indir, '*.cpp');
+
+% Check date of the input files
+fls = dir(indir);
+changeDate = max([fls.datenum]);
+changeDate = datetime(changeDate, 'ConvertFrom', 'datenum');
+changeDate = int32(posixtime(changeDate));
+
+% Check if the build directiory exists, and if not, create it
+if ~isfolder(outdir)
+    mkdir(outdir)
+end
+addpath(outdir)
+
 % Check if the MEX needs to be build
 build = ~ismex('callSinrNetwork') || forceBuild;
+if ~build
+    % Additionally check if the compiled mex is based on an old version
+    version = callSinrNetwork('buildVersion');
+    build = version < changeDate;
+end
 
 if build
     disp('SINR networking library needs to be rebuild.')
@@ -26,19 +50,15 @@ if build
     % it, so that it can not be overriden. This call gets rid of the lock.
     clear mex %#ok<CLMEX>
     
-    % Read the path of this file. Is required to assemble the path to the
-    % *.cpp files and the build directory.
-    [localPath,~,~] = fileparts(mfilename('fullpath'));
-    outdir  = fullfile(localPath, '..', '..', '..', 'build');
-    infiles = fullfile(localPath, 'cpp', '*.cpp');
+    % Assemble build version that gets included into the mex file
+    buildVersion = sprintf('-DBUILD_VERSION=%d', changeDate);
     
     % Call Matlab MEX compiler with the following options:
     %   R2017b -> Set old API for complex numbers, may not be required.
     %   silent -> Suppress unnecessary messages from the compiler.
     %   outdir -> Directory in which the MEX file gets stored.
     %   output -> Name of the resulting MEX file.
-    mex('-R2017b', '-silent', '-outdir', outdir, '-output', 'callSinrNetwork', infiles)
-    addpath(outdir)
+    mex('-R2017b', '-silent', buildVersion, '-outdir', outdir, '-output', 'callSinrNetwork', infiles)
     
     % Check if the build was successful. If not, there will be no callable
     % MEX function with the correct name

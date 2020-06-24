@@ -19,13 +19,30 @@ agentCount = 50;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
 dT         = 0.1;  % Size of the simulation time steps [s]
 Tf         = 100;  % Simulation time [s]
-range      = 6;    % Range of the radio communication
-pTransmit  = 0.95; % Probability of successful transmission
+
+netType    = 3;    % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
 
 %% Initialize the network
-% Network = IdealNetwork(agentCount, dT, dimension, range);
-Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+switch netType
+    case 1
+        range   = 6;      % Range of the radio communication
+        Network = IdealNetwork(agentCount, dT, dimension, range);
+    case 2
+        range     = 6;    % Range of the radio communication
+        pTransmit = 0.95; % Probability of successful transmission
+        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+    case 3
+        config                  = SinrConfiguration();
+        config.agentCount       = agentCount;
+        config.slotCount        = agentCount;
+        config.cycleTime        = dT;
+        config.wirelessProtocol = WirelessProtocol.wp_802_11p;
+        config.power            = 500e-3;
+        config.packetSize       = 6*64;
+        Network = SinrNetwork(config);
+end
 
+%% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
 % and later convert this to a standard Matlab array.
