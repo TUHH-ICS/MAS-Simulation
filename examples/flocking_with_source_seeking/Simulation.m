@@ -29,10 +29,17 @@ fcenter=50;
 frange=100;
 fvar=1e2;
 fscale=50;
+%% Field Sensor parameters
+N               =10;    % Number of measurements around the agent pos
+sensor_range    =5;     % sensor range around the agent pos
+noise_bound     =20;    % apriori known bound on measurement noise
 %% Initialize the external potential field
 conc_Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
 %% Initialize the Interaction field between agents
 interac_field=OS_InteractionField();
+
+%% Initialize the Field sensor for each agent
+field_sensor=AgentFieldSensor(sensor_range,N,noise_bound,conc_Field);
 
 %% Initialize the network
 Network = IdealNetwork(agentCount, dT, dimension, range);
@@ -49,7 +56,7 @@ for i = 1:length(Agents)
     vel = 1 * (rand(dimension, 1) - 0.5);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent2(Network.getId(), dT, pos, vel, conc_Field, interac_field);
+    Agents{i} = FlockingAgent2(Network.getId(), dT, pos, vel, conc_Field, interac_field,field_sensor);
 end
 Agents = [Agents{:}];
 
