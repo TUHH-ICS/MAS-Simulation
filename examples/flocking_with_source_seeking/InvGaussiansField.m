@@ -26,13 +26,13 @@ classdef InvGaussiansField
         function field_eval=get_field_value_at(obj,z)
             % This function outputs the value of the field at the 
             % location z
-            field_eval=0;            
+            field_eval=zeros(1,size(z,2));            
             for i=1:obj.no_centers
                 source_i=obj.centers(:,i);
                 Sigma_i=obj.Sigmas(:,(i-1)*obj.dim+1:i*obj.dim);
                 scale_i=obj.scales(i);
                 e=(z-source_i);
-                field_eval = field_eval +scale_i*exp(-0.5*e'*inv(Sigma_i)*e);
+                field_eval = field_eval +scale_i*exp(-0.5*diag(e'*inv(Sigma_i)*e)');
             end
             field_eval=-1*field_eval;
         end
