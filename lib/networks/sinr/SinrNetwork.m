@@ -12,14 +12,23 @@ classdef SinrNetwork < BaseNetwork
     
     properties(GetAccess = public, SetAccess = protected)
         sentMessages % Messages waiting to be processed in the network
+        recvMessages % Messages waiting to be delivered to the agents
     end
     
     properties(GetAccess = public, SetAccess = immutable)
         config(1,1) SinrConfiguration
+        
+        % Controls whether the messages that are received in different
+        % slots get delivered all at once, or in their respective slot
+        enableSubstepping(1,1) logical = false
+    end
+    
+    properties(GetAccess = private, SetAccess = private)
+        slotCounter = 1
     end
     
     methods
-        function obj = SinrNetwork(config)
+        function obj = SinrNetwork(config, enableSubstepping)
             %SINRNETWORK Construct an instance of this class
             %   Initializes the c++ network simulation library and the
             %   Matlab message storage.
@@ -31,14 +40,32 @@ classdef SinrNetwork < BaseNetwork
                 error('You must only create one instance of the SinrNetwork class at a time!')
             end
             
-            obj@BaseNetwork(config.agentCount, config.cycleTime)
+            % Set default value for substepping parameter
+            if nargin < 2
+                enableSubstepping = false;
+            end
+            
+            % Select correct cycleTime for the network object. When
+            % substepping is enabled, the network must be called for each
+            % slot, this slotTime is selected.
+            if enableSubstepping
+                time = config.slotTime;
+            else
+                time = config.cycleTime;
+            end
+            
+            obj@BaseNetwork(config.agentCount, time)
             
             % Ensure that the configuration is not changed from the outside
             % after the creation of the network
             obj.config = copy(config);
+            obj.enableSubstepping = enableSubstepping;
             
             % Initialize matlab message storage
-            obj.sentMessages = MessageBuffer(config.agentCount);
+            obj.sentMessages = cell(config.agentCount, 1);
+            if enableSubstepping
+                obj.recvMessages = cell(config.agentCount, config.slotCount);
+            end
             
             % Build C++ networking library if necessary
             buildSuccess = buildSinrMex();
@@ -76,7 +103,10 @@ classdef SinrNetwork < BaseNetwork
             % Check if the agent wants to transmit
             msg = agent.getMessage();
             if ~isempty(msg)
-                obj.sentMessages.put(msg);
+                % Copy message into the buffer. Any messages that was
+                % previously send from this agent since the last cycle will
+                % be overriden and thus get dropped.
+                obj.sentMessages{agent.id} = msg;
             end
         end
         
@@ -88,29 +118,62 @@ classdef SinrNetwork < BaseNetwork
             %   is successfully transmitted, the transmission itself, i. e.
             %   the content of the messages, is handled in Matlab.
             
-            % Call into the C++ library to determine all successfully
-            % transmitted messages.
-            callSinrNetwork('process')
-            
-            messages = obj.sentMessages.takeAll();
-            senders  = [messages.sender];
-            recvMessages = cell(obj.agentCount,1);
-            
-            if ~isempty(messages)
-                for i = 1:obj.agentCount
-                    % Call into the C++ library to check which messages where
-                    % received by agent i in which slot.
-                    %
-                    % Each row of vec represents a received messages. The first
-                    % column contains the id of the sender, the second column
-                    % the slot in which the message was received. At the
-                    % moment, the slot information is ignored.
-                    vec = callSinrNetwork('updateMatlabAgent', i);
+            if obj.slotCounter == 1
+                % Call into the C++ library to determine all successfully
+                % transmitted messages.
+                callSinrNetwork('process')
 
-                    % Collect all received messages based on the sender
-                    mask = any(senders == vec(:, 1));
-                    recvMessages{i} = messages(mask);
+                % Collect messages that were transmitted since the last
+                % call
+                messages = [obj.sentMessages{:}];
+                obj.sentMessages = cell(obj.agentCount,1);
+                
+                if ~obj.enableSubstepping || isempty(messages)
+                    recvMessages = cell(obj.agentCount, 1);
                 end
+
+                if ~isempty(messages)
+                    senders = [messages.sender];
+                    
+                    for i = 1:obj.agentCount
+                        % Call into the C++ library to check which messages where
+                        % received by agent i in which slot.
+                        %
+                        % Each row of vec represents a received messages. The first
+                        % column contains the id of the sender, the second column
+                        % the slot in which the message was received. At the
+                        % moment, the slot information is ignored.
+                        vec = callSinrNetwork('updateMatlabAgent', i);
+
+                        % Collect all received messages based on the sender
+                        mask = senders == vec(:, 1);
+                        if obj.enableSubstepping
+                            % Reset received messages from previous cycle
+                            obj.recvMessages(i, :) = {[]};
+                            
+                            % Copy messages into the corresponding slots
+                            maskedSlots = vec(any(mask,2), 2);
+                            for j = 1:length(maskedSlots)
+                                obj.recvMessages{i, maskedSlots(j)} = messages(mask(j,:));
+                            end
+                        else
+                            % Copy all received messages for this agent
+                            recvMessages{i} = messages(any(mask,1));
+                        end
+                    end
+                    
+                    if obj.enableSubstepping
+                        recvMessages = obj.recvMessages(:, 1);
+                    end
+                end 
+            else
+                % Return all messages that were received in this slot. When
+                % substepping is disabled, slotCounter is always 1.
+                recvMessages = obj.recvMessages(:, obj.slotCounter);
+            end
+            
+            if obj.enableSubstepping
+                obj.slotCounter = mod(obj.slotCounter, obj.config.slotCount) + 1;
             end
         end
     end
