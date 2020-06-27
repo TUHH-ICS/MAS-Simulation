@@ -58,16 +58,6 @@ classdef AgentFieldSensor
             %toc
             
             %tic
-            % CVX: "simplest" possible function agreeing with data in linf
-            %theta=obj.eps_insensitive_loss_optimal(Z,Data.values',obj.noise_bound);
-            %toc
-            
-            %tic
-            % CVX: "simplest" possible function agreeing with data in linf
-            %theta_cvx=obj.get_sparse_model_cvx(Z,Data.values',obj.noise_bound);
-            %toc
-            
-            %tic
             % linprog: "simplest" possible function agreeing with data in linf
             theta=obj.get_sparse_model_linprog(Z,Data.values',obj.noise_bound);
             %toc
@@ -86,49 +76,10 @@ classdef AgentFieldSensor
             Model_est.b_id=theta(counter:(counter+d-1),1);
             Model_est.c_id=theta(end,1);
         end
-        function [x]=eps_insensitive_loss_optimal(obj,A,b,t)
-            % function that solves min ||x||_1 s.t ||Ax-b||_inf<t
-            % Gives the "simplest" function that agrees with data (upto t in l_inf)
-            nx=size(A,2);
-            ny=size(A,1);
-            c=ones(ny,1);
-            cvx_begin quiet
-                variable x(nx)
-                
-                minimize norm(x,1)
-                subject to
-                    %A*x-b<=t*c
-                    %A*x-b>=-t*c
-                    norm(A*x-b,inf)<=t
-            cvx_end
-        end
-            
-        function [x]=get_sparse_model_cvx(obj,A,b,t)
-            % function that solves min ||x||_1:||Ax-b||_inf<t with linprog
-            % Gives the "simplest" function that agrees with data (upto t in l_inf)
-            nx=size(A,2);
-            ny=size(A,1);
-            c=[zeros(nx,1);ones(nx,1)];
-            A_linprog=[eye(nx),    -eye(nx);...
-                    -eye(nx),   -eye(nx);...
-                    A,          zeros(ny,nx);...
-                    -A,         zeros(ny,nx)];
-            b_linprog=[ zeros(nx,1);...
-                        zeros(nx,1);...
-                        t*ones(ny,1)+b;...
-                        t*ones(ny,1)-b];
-            cvx_begin quiet
-                variable z(2*nx)
-                
-                minimize transpose(c)*z
-                subject to 
-                    A_linprog*z<=b_linprog                    
-            cvx_end
-            x=[eye(nx),zeros(nx)]*z;
-        end
+        
         function [x]=get_sparse_model_linprog(obj,A,b,t)
-            % function that solves min ||x||_1:||Ax-b||_inf<t with linprog
-            % Gives the "simplest" function that agrees with data (upto t in l_inf)
+        % function that solves min ||x||_1:||Ax-b||_inf<t with linprog
+        % Gives the "simplest" function that agrees with data (upto t in l_inf)
             nx=size(A,2);
             ny=size(A,1);
             c=[zeros(nx,1);ones(nx,1)];
