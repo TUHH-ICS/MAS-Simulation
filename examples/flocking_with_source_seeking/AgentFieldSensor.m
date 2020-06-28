@@ -54,15 +54,11 @@ classdef AgentFieldSensor
             end
             %% Identify model
             
-            %tic
             % Normal equations for Least squares solution
             %theta=Z\Data.values'; % Gives a LS solution for non-square A
-            %toc
             
-            %tic
             % linprog: "simplest" possible function agreeing with data in linf
             theta=obj.eps_insens_loss_optimal_linprog(Z,Data.values',obj.noise_bound,obj.C_reg);
-            %toc
             
             % Get the quadratic model matrices back
             counter=1;
