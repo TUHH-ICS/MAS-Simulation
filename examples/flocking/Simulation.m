@@ -102,25 +102,45 @@ end
 % profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
+%% Resample data for plotting
+% Due to the multi-rate support, the sampling will not always be uniform.
+% Therefore, we need to resample the data. The resampling is oriented on
+% the set parameters of the video, that may be produced
+
+TVideo = 20; % Desired duration of the video [s]
+FPS    = 30; % Framerate of the video [Hz]
+
+% Calculate the required sampling time to meet the expectations
+dTAnimate = Tf / (TVideo * FPS);
+
+% Resample the data. The function uses a ZOH resampling approach 
+tsin  = timeseries(permute(pos_history, [2 3 1]), t_history);
+tsout = resample(tsin, 0:dTAnimate:Tf, 'zoh');
+
+% Extract the resampled data
+pos_resampled = permute(tsout.Data, [3 1 2]);
+t_resampled   = tsout.Time;
+step_sampled  = tsout.length;
+
 %% Animate simulation results
 figure()
 
 % Compute boundary
-x_pos  = squeeze(pos_history(:,1,:));
-y_pos  = squeeze(pos_history(:,2,:));
+x_pos  = squeeze(pos_resampled(:,1,:));
+y_pos  = squeeze(pos_resampled(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 % Open video file with mp4 encoding
 if saveVideo
     video = VideoWriter('flocking', 'MPEG-4');
-    video.FrameRate = 50;
+    video.FrameRate = FPS;
     open(video)
 else
     video = [];
 end
 
-for k = 1:steps
-    pos = squeeze(pos_history(k,:,:));
+for k = 1:step_sampled
+    pos = squeeze(pos_resampled(k,:,:));
     scatter(pos(1,:), pos(2,:))
     
     xlim(bounds(x_pos))
