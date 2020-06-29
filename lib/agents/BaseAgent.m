@@ -59,11 +59,14 @@ classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
             %   processing between steps is required, you must override
             %   this function.
             
-            if nargin > 1 && nargout == 0
-                obj.messages = [ obj.messages, msgs ];
+            if isempty(obj.messages)
+                obj.messages = MessageBuffer();
+            end
+            
+            if nargin > 1 && nargout == 0                
+                obj.messages.put(msgs);
             elseif nargin <= 1 && nargout > 0
-                msgs         = obj.messages;
-                obj.messages = [];
+                msgs = obj.messages.takeAll();
             else
                 error('You must have either inputs or an output!')
             end            
