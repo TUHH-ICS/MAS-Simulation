@@ -16,6 +16,9 @@ classdef FlockingAgent2 < BaseAgent
     properties(Access = private)
         x        % Local variable for the agent state
     end
+    properties(Access = private)
+        QuadModelEst        % Local identified quadratic model
+   end
     
     properties(GetAccess = private, SetAccess = immutable)
         interac_field % Interaction field with other agents
@@ -43,6 +46,8 @@ classdef FlockingAgent2 < BaseAgent
 			obj.conc_field=conc_field;
             obj.interac_field=interac_field;
             obj.field_sensor=field_sensor;
+            Data=obj.field_sensor.get_measurement(initialPos);
+            obj.QuadModelEst=obj.field_sensor.quadratic_regression(Data);
         end        
         
         function value = get.state(obj)
@@ -69,11 +74,15 @@ classdef FlockingAgent2 < BaseAgent
         function [grad,hess] = get_gradient_hessian_est(obj)
             %get_gradient_est
             % This function estimates the gradient and the hessian of the 
-            % field at the current agent location. 
-            Data=obj.field_sensor.get_measurement(obj.position);
-            Model_est=obj.field_sensor.quadratic_regression(Data);
-            grad=2*Model_est.Q_id*obj.position+Model_est.b_id;
-            hess=2*Model_est.Q_id;
+            % field at the current agent location.
+            field_estimate=obj.position'*obj.QuadModelEst.Q_id*obj.position+obj.QuadModelEst.b_id'*obj.position+obj.QuadModelEst.c_id;
+            field_measurement=obj.conc_field.get_field_value_at(obj.position)+obj.field_sensor.noise_bound*(-1+2*rand);
+            if abs(field_estimate-field_measurement)>=obj.field_sensor.noise_bound
+                Data=obj.field_sensor.get_measurement(obj.position);
+                obj.QuadModelEst=obj.field_sensor.quadratic_regression(Data);
+            end
+            grad=2*obj.QuadModelEst.Q_id*obj.position+obj.QuadModelEst.b_id;
+            hess=2*obj.QuadModelEst.Q_id;
             % Can get the true gradient and hessians at obj.position 
             % for a posterior analysis
             %grad=obj.conc_field.get_true_gradient(obj.position);

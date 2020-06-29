@@ -33,13 +33,14 @@ fscale=50;
 N               =10;    % Number of measurements around the agent pos
 sensor_range    =5;     % sensor range around the agent pos
 noise_bound     =20;    % apriori known bound on measurement noise
+C_reg           =0.01;  % L1 regularization tuning.(0-> no regularization)
 %% Initialize the external potential field
 conc_Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
 %% Initialize the Interaction field between agents
 interac_field=OS_InteractionField();
 
 %% Initialize the Field sensor for each agent
-field_sensor=AgentFieldSensor(sensor_range,N,noise_bound,conc_Field);
+field_sensor=AgentFieldSensor(sensor_range,N,noise_bound,conc_Field,C_reg);
 
 %% Initialize the network
 Network = IdealNetwork(agentCount, dT, dimension, range);

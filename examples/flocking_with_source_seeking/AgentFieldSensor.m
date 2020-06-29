@@ -6,17 +6,19 @@ classdef AgentFieldSensor
       sensor_range      % Range of sensor
       N                 % Number of measurements
       noise_bound       % peak bound (linf) on the noise
+      C_reg             % Tuning L1-Regularization(0->no Regularization)
    end
    properties(GetAccess = private, SetAccess = immutable)
         conc_field  % external concentration field
     end
    methods
-        function obj = AgentFieldSensor(sensor_range,N,noise_bound,conc_field)
+        function obj = AgentFieldSensor(sensor_range,N,noise_bound,conc_field,C_reg)
             % Constructor function for setting the properties
             obj.sensor_range       = sensor_range;
             obj.N                  = N;
             obj.noise_bound        = noise_bound;  
             obj.conc_field         = conc_field;  
+            obj.C_reg              = C_reg;
         end
         function Data=get_measurement(obj,agent_pos)
             % This function takes N uniformly distributed samples in a square region
@@ -51,11 +53,12 @@ classdef AgentFieldSensor
                 Z(i,end)=1;
             end
             %% Identify model
+            
             % Normal equations for Least squares solution
-            theta=Z\Data.values'; % Gives a LS solution for non-square A
-           
-            % "simplest" possible function agreeing with data in linf
-            %theta=obj.eps_insensitive_loss_optimal(Z,Data.y',obj.noise_bound);
+            %theta=Z\Data.values'; % Gives a LS solution for non-square A
+            
+            % linprog: "simplest" possible function agreeing with data in linf
+            theta=obj.eps_insens_loss_optimal_linprog(Z,Data.values',obj.noise_bound,obj.C_reg);
             
             % Get the quadratic model matrices back
             counter=1;
@@ -71,19 +74,33 @@ classdef AgentFieldSensor
             Model_est.b_id=theta(counter:(counter+d-1),1);
             Model_est.c_id=theta(end,1);
         end
-        function [x]=eps_insensitive_loss_optimal(obj,A,b,t)
-            % function that solves min ||x||_1 s.t ||Ax-b||_inf<t
-            % Gives the "simplest" function that agrees with data (upto t in l_inf)
+        
+        function [x]=eps_insens_loss_optimal_linprog(obj,A,b,eps,C_reg)
+            % Epsilon insensitive loss function with an L1-regularization
+            % function that solves 
+            % min   1'*zeta_ub+ 1'*zeta_lb+ C.||x||_1
+            % s.t   -zeta_lb-eps*1 <= Ax-b <= eps*1+zeta_ub 
+            %       zeta_lb,zeta_ub>=0
+        
             nx=size(A,2);
             ny=size(A,1);
-            c=ones(ny,1);
-            cvx_begin quiet
-                variable x(nx)
-                minimize norm(x,1)
-                subject to
-                    A*x-b<=t*c
-                    A*x-b>=-t*c
-            cvx_end
+            c_linprog=[ones(ny,1);ones(ny,1);zeros(nx,1);C_reg*ones(nx,1)];
+            
+            A_linprog=[zeros(ny),       -eye(ny),       zeros(ny,nx),   zeros(ny,nx);...
+                       -eye(ny),        zeros(ny),      zeros(ny,nx),   zeros(ny,nx);
+                       zeros(nx,ny),    zeros(nx,ny),   eye(nx),        -eye(nx);...
+                       zeros(nx,ny),    zeros(nx,ny),   -eye(nx),       -eye(nx);...
+                       -eye(ny),        zeros(ny),      A,              zeros(ny,nx);...
+                       zeros(ny)       -eye(ny),       -A,              zeros(ny,nx)];
+            b_linprog=[ zeros(ny,1);...
+                        zeros(ny,1);...
+                        zeros(nx,1);...
+                        zeros(nx,1);...
+                        eps*ones(ny,1)+b;...
+                        eps*ones(ny,1)-b];
+            options = optimoptions('linprog','Display','none');            
+            z_opt=linprog(c_linprog,A_linprog,b_linprog,[],[],[],[],options);
+            x=[zeros(nx,ny),zeros(nx,ny),eye(nx),zeros(nx)]*z_opt;
         end
    end
 end
