@@ -83,7 +83,9 @@ classdef SinrNetwork < BaseNetwork
             %   Frees the memory that was allocated in the c++ library
 
             % Call into the C++ library to free its memory
-            callSinrNetwork('delete')
+            if ismex('callSinrNetwork')
+                callSinrNetwork('delete')
+            end
             
             % Release SinrNetwork class lock such that another instance can
             % be created.

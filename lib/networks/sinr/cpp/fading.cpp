@@ -3,6 +3,7 @@
 #include "fading.h"
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 #include <assert.h>
 #include <random>
 #include <set>

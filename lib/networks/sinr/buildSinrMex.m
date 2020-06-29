@@ -58,7 +58,17 @@ if build
     %   silent -> Suppress unnecessary messages from the compiler.
     %   outdir -> Directory in which the MEX file gets stored.
     %   output -> Name of the resulting MEX file.
-    mex('-R2017b', '-silent', buildVersion, '-outdir', outdir, '-output', 'callSinrNetwork', infiles)
+    try
+        mex('-R2017b', '-silent', buildVersion, '-outdir', outdir, '-output', 'callSinrNetwork', infiles)
+    catch e
+        if strcmp(e.identifier, 'MATLAB:mex:Error')
+            warning(e.message)
+            success = false;
+            return
+        else
+            rethrow(e)
+        end
+    end
     
     % Check if the build was successful. If not, there will be no callable
     % MEX function with the correct name
@@ -66,12 +76,6 @@ if build
         disp('Building succeeded!')
     else
         success = false;
-        build   = false;
     end
 end
-end
-
-function flag = ismex(name)
-%ISMEX Checks if there exists a MEX function with the given name.
-    flag = (exist(name, 'file') == 3);
 end
