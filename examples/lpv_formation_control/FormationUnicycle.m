@@ -1,11 +1,19 @@
 classdef FormationUnicycle < BaseAgent
     
-    properties(GetAccess = public, SetAccess = protected)
-        xI
+    properties(Constant)
+        epsilon = 0.0005; % Convergence speed of the consensus protocol
     end
     
     properties(GetAccess = public, SetAccess = immutable)
+        m   % Mass of the unicycle
+        Iz  % Moment of inertia
+        d   % Length of the handle
+        
         ref % Formation reference
+    end
+    
+    properties(GetAccess = public, SetAccess = protected)
+        consens  % State of the consensus protocol
     end
     
     properties(GetAccess = private, SetAccess = immutable)
@@ -21,34 +29,36 @@ classdef FormationUnicycle < BaseAgent
     end
     
     methods
-        function obj = FormationUnicycle(id, dT, initialPos, reference)
+        function obj = FormationUnicycle(id, initialPos, reference)
             %FORMATIONUNICYCLE Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
-                        
-            obj@BaseAgent(id, dT);
-            obj.xI = zeros(2,1);
+            
+            % Load data from synthesis script
+            data = load('unicycle_controller');
+            
+            obj@BaseAgent(id, data.Ts);
+            obj.m  = data.m;
+            obj.Iz = data.Iz;
+            obj.d  = data.d;
             
             x0 = [ initialPos; zeros(3,1) ];
-            
-            % Build unicycle model
-            discrete = true;
-            if discrete
-                f = @(k, x, u) x + dT * unicycleFun(dT * k, x, u);
-                obj.dynamics = DiscreteNonlinearDynamics(f, [], x0);
-            else
-                obj.dynamics = ContinuousNonlinearDynamics(dT, @unicycleFun, [], x0);
-            end
+            f = @(k, x, u) x + obj.dT * unicycleFun(obj.dT * k, x, u);
+            obj.dynamics = DiscreteNonlinearDynamics(f, [], x0);
             
             % Build controller
-            K1 = [ -8918.71      0      0      -203.43     0     -875.11     0    ;
-                       0     -1630.05  -5.114     0     -217.14     0     -128.91 ];
-            K2 = [ -8918.71      0      0      -203.43     0     -875.11     0    ;
-                       0     -1630.05  -5.114     0     -217.14     0     -128.91 ];
-            obj.controller = @(rho) controllerInterpolation(rho, [-1, 1], {0.01*K1, 0.01*K2});
+            A = @(rho) data.Ak0 + rho * data.Ak1;
+            B = @(rho) data.Bk0 + rho * data.Bk1;
+            C = @(rho) data.Ck0 + rho * data.Ck1;
+            D = @(rho) data.Dk0 + rho * data.Dk1;
+            obj.controller = DiscreteLpvDynamics([], A, B, C, D, zeros(8,1));
+            
+            % Initialize the consensus protocol to the initial position of
+            % the agent itself
+            obj.consens = initialPos;
             
             % Set the formation reference if one is given to the agent
-            if nargin <= 3
+            if nargin <= 2
                 obj.ref = zeros(2,1);
             else
                 obj.ref = reference;
@@ -85,34 +95,35 @@ classdef FormationUnicycle < BaseAgent
                 % Calculate new formation reference. We use the normalized
                 % Laplacian, therefore we calculate the mean of the
                 % positions, not the sum
-                data      = [messages.data];
-                positions = [data.position];
-                dist      = mean(positions, 2) + obj.ref - obj.position;
-                
-                % Integrate formation error
-                obj.xI = obj.xI + dist;
+                data        = [messages.data];
+                positions   = [data.position];
+                dist        = obj.consens - obj.ref - mean(positions, 2);
+                obj.consens = obj.consens - obj.epsilon * dist;
             end
             
             % Extract state information from the unicycle model
             phi   = obj.dynamics.x(4);
             omega = obj.dynamics.x(5);
-            
-            % Assemble the augmented state that is fed into the controller.
-            % Consists of the plant state and integrated formation error
-            x = [ obj.dynamics.x; obj.xI ];
-            
+
             % For the controller synthesis, we used a rotated frame of
             % reference for the agents. As these are state feedback
             % controllers, we need to also rotate the frame of reference
             % here to be consistent with the synthesis.
             rot = [ cos(phi), sin(phi); -sin(phi), cos(phi) ];
-            trf = blkdiag(rot, eye(3), rot);
-            u   = obj.controller(omega) * trf * x;
+
+            % Calculate current scheduling parameter vt
+            rho = obj.d * omega;
+            
+            % Calculate local tracking error of the unicycle
+            e = obj.consens - obj.position;
+            
+            % Evaluate controller equation
+            u = obj.controller.step(rot * e, rho);
             obj.dynamics.step(u);
                         
             % Send message to network, include only the position 
             data = struct;
-            data.position = obj.position - obj.ref;
+            data.position = obj.consens - obj.ref;
             obj.send(data)
         end
     end
@@ -123,7 +134,7 @@ function xdot = unicycleFun(~, x, u)
 
     m = 1; % Mass of the unicycle
     I = 1; % Moment of inertia
-    d = 8; % Length of the handle
+    d = 0.2; % Length of the handle
 
     xdot    = zeros(size(x));
     xdot(1) = x(3) * cos(x(4)) - x(5) * d * sin(x(4)); % qx
