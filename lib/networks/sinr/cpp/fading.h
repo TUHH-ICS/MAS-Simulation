@@ -78,6 +78,8 @@ class WirelessProtocolParameters{
 
 		WirelessProtocolParameters(const double freq, const double channelCapacity, const double channelBandwidth, const double temperature, const double c = 299792458) : m_freq(freq), m_channelCapacity(channelCapacity), m_channelBandwidth(channelBandwidth), m_temperature(temperature), m_c(c), m_boltzmannConst(1.38064852e-23), m_bitrate(channelCapacity){};
 
+ 		double adapt_power(double power);
+		double path_loss(const vec3& u, const vec3& v, const double pathLossCoeff); 
 		double noise();
 		double wavelength();
 		double sinr_threshold();
@@ -142,4 +144,40 @@ public:
 	){}; 
 
 };
+
+struct UnderwaterModem{
+	const double bitrate;
+};
+
+extern UnderwaterModem Mako;
+extern UnderwaterModem Marlin;
+
+class UnderwaterProtocol : public WirelessProtocolParameters {
+    /*
+    :param modem: one of (SINR::)Mako, (SINR::)Marlin
+    :param shippingParameter: shipping activity between 0 and 1
+    :param windParameter: wind speed in m/s
+    */
+
+    public:
+	    const double m_shippingParameter;
+	    const double m_windParameter;
+
+	    // cf. "Underwater Acoustic Modems", Sandra Sendra et al., IEEE Sensors Journal, 2016.
+	    UnderwaterProtocol(const UnderwaterModem& model, const double shippingParameter = 0.5, const double windParameter = 10.0) : WirelessProtocolParameters(
+				     23e3, // frequency = 23 kHz
+				     model.bitrate, // bitrate = 240 bit/s (Mako) or 480 bit/s (Marlin)
+				     14e3,   // channel bandwith = 14 kHz 
+				     0, // temperature is not used??
+				     1500.0 // c, i.e. speed of sound underwater [m/s]
+			      ), m_shippingParameter(shippingParameter), m_windParameter(windParameter){}; 
+
+
+	    double adapt_power(double power);
+	    double noise();
+	    double path_loss(const vec3& u, const vec3& v, const double pathLossCoeff);
+
+}; 
+
+
 } // end namespace SINR

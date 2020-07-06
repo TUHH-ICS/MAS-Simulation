@@ -130,11 +130,13 @@ class SomeAgent : public Agent<Data>{
 	public:
 		unsigned int m_numberOfAgents;
 		double m_beaconFreq;
+		bool m_sendFlag;
 
 		int init(DataType* pInitialData, const unsigned int numberOfAgents, const double beaconFrequency){
  		       	m_pData = pInitialData;
 			m_numberOfAgents = numberOfAgents;
 			m_beaconFreq = beaconFrequency; 
+			m_sendFlag = false;
 			return 0;
 		}
 		int receive_data(AgentID sender, SlotNumber k, Data& data) override{ 
@@ -147,6 +149,19 @@ class SomeAgent : public Agent<Data>{
 			m_received_from.clear();
 			return 0;
 		}
+
+		int set_send_flag(const bool val){
+			m_sendFlag = val;
+			return 0;
+		}
+
+		bool get_send_flag(){
+			// ToDo: check if *init* has been called
+			return m_sendFlag;
+		}
+
+
+
 };
 
 //forward declaration
@@ -218,6 +233,9 @@ int SimulationEnvironment<MyData>::process(){
 	//Sending/receiving phase:
 	// 1) Sending
 	for (AgentID i = 0; i< m_numberOfAgents; i++){
+		if (! m_pAgents.at(i)->get_send_flag()){
+			continue;
+		}
 		SlotNumber slot = m_channel.sample_slot();
 		MyData* pData = m_pAgents.at(i)->get_data();
 		m_channel.send(i, slot, *pData);

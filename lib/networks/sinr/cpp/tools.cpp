@@ -26,6 +26,14 @@ double vec3_len(const vec3& a){
 	return vec3_dist(a, {0.0, 0.0, 0.0});	
 }
 
+bool vec3_eq(const vec3& a, const vec3& b){
+	if (a.x1 == b.x1 && a.x2 == b.x2 && a.x3 == b.x3){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
 
 bool my_fmod(double x, double y){
 	const double a = x/y;
