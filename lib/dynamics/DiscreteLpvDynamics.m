@@ -76,7 +76,7 @@ classdef DiscreteLpvDynamics < DiscreteDynamics
             end
         end
         
-        function z = step(obj, w)
+        function z = step(obj, w, rho)
             %STEP Method to execute a single time step of the dynamics.
             %   This function takes an input w and evaluates the state and
             %   output equations of the LPV system. Note that z contains
@@ -85,7 +85,13 @@ classdef DiscreteLpvDynamics < DiscreteDynamics
             %   The returned valued is empty if no C and D functions are
             %   specified.
             
-            rho = obj.rho_fun(obj.k, obj.x, w);
+            if ~isempty(obj.rho_fun)
+                if nargin >= 3
+                    error('You must set either a rho_fun or give an external rho, not both!')
+                end
+                
+                rho = obj.rho_fun(obj.k, obj.x, w);
+            end
             
             if nargout >= 1
                 z = obj.C(rho) * obj.x + obj.D(rho) * w;    
