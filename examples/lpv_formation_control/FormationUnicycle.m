@@ -1,7 +1,7 @@
 classdef FormationUnicycle < BaseAgent
     
     properties(Constant)
-        epsilon = 0.0005; % Convergence speed of the consensus protocol
+        epsilon = 0.001; % Convergence speed of the consensus protocol
     end
     
     properties(GetAccess = public, SetAccess = immutable)

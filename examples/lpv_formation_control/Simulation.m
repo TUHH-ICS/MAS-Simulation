@@ -14,20 +14,40 @@ saveVideo = false;
 agentCount = 5;    % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
 dT         = 0.01; % Size of the simulation time steps
-Tf         = 100;    % Final simulation time
-range      = Inf;  % Range of the radio communication
-pTransmit  = 0.95; % Probability of successful transmission
+Tf         = 50;    % Final simulation time
+
+% Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
+netType    = 1;
 
 %% Initialize the network
-Network = IdealNetwork(agentCount, dT, dimension, range);
-% Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+switch netType
+    case 1
+        range   = Inf;   % Range of the radio communication
+        Network = IdealNetwork(agentCount, dT, dimension, range);
+    case 2
+        range     = Inf; % Range of the radio communication
+        pTransmit = 0.1; % Probability of successful transmission
+        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+    case 3
+        config                  = SinrConfiguration();
+        config.agentCount       = agentCount;
+        config.slotCount        = agentCount;
+        config.cycleTime        = dT;
+        config.wirelessProtocol = WirelessProtocol.wp_802_11p;
+        config.power            = 500e-3;
+        config.packetSize       = 3*64;
+        enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
+        Network = SinrNetwork(config, enableSubstepping);
+end
 
+%% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
 % and later convert this to a standard Matlab array.
 Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
-    Agents{i} = FormationUnicycle(Network.getId(), zeros(dimension,1), [i^2; 0]);
+    pos = 5 + 10 * (rand(dimension, 1) - 0.5);
+    Agents{i} = FormationUnicycle(Network.getId(), pos, [i^2; 0]);
 end
 Agents = [Agents{:}];
 
@@ -99,10 +119,10 @@ step_sampled  = tsout.position.length;
 figure()
 
 % Compute boundary
-x_pos  = squeeze(pos_resampled(:,1,:));
-x_cns  = squeeze(cns_resampled(:,1,:));
-y_pos  = squeeze(pos_resampled(:,2,:));
-y_cns  = squeeze(cns_resampled(:,2,:));
+x_pos  = squeeze(pos_history(:,1,:));
+x_cns  = squeeze(cns_history(:,1,:));
+y_pos  = squeeze(pos_history(:,2,:));
+y_cns  = squeeze(cns_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 x_bounds = bounds([x_pos; x_cns]);
@@ -111,7 +131,7 @@ y_bounds = bounds([y_pos; y_cns]);
 % Open video file with mp4 encoding
 if saveVideo
     video = VideoWriter('formation', 'MPEG-4');
-    video.FrameRate = 50;
+    video.FrameRate = FPS;
     open(video)
 else
     video = [];
@@ -147,11 +167,11 @@ end
 
 figure()
 subplot(211)
-plot(t_resampled, x_cns, '--', t_resampled, x_pos, '-')
+plot(t_history, x_cns, '--', t_history, x_pos, '-')
 xlabel('Time t')
 ylabel('x(t)')
 
 subplot(212)
-plot(t_resampled, y_cns, '--', t_resampled, y_pos, '-')
+plot(t_history, y_cns, '--', t_history, y_pos, '-')
 xlabel('Time t')
 ylabel('y(t)')
