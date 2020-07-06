@@ -47,6 +47,7 @@ class Agent{
 		static unsigned int m_IDcounter;
 		const int m_ID;
 		TheData* m_pData;
+        bool m_sendFlag;
 
 		Agent() : m_ID(m_IDcounter){
 			m_IDcounter++;
@@ -57,13 +58,18 @@ class Agent{
 		virtual ~Agent() = 0;
 
 		virtual int init(TheData* pInitialData){
-		       	m_pData = pInitialData;
-
+		    m_pData = pInitialData;
+            m_sendFlag = false;
+            
 			return 0;
 		}
+        
 		vec3 get_pos();
 		void set_pos(const vec3 pos);
 
+        int set_send_flag(const bool val);
+        bool get_send_flag();
+        
 		virtual TheData* get_data();
 
 		virtual int pre_process();
@@ -108,13 +114,26 @@ int Agent<TheData>::receive_data(AgentID sender, SlotNumber k, TheData& data){
 	std::cout << "Agent ";
 	std::cout << m_ID << std::endl;
 	std::cout << "is receving Data from ";
-	std::cout <<  sender << std::endl;
+	std::cout << sender << std::endl;
 	return 0;
 }
 
 template <class TheData>
 int Agent<TheData>::post_process(){
+    m_sendFlag = false;
 	return 0;
+}
+
+template <class TheData>
+int Agent<TheData>::set_send_flag(const bool val){
+    m_sendFlag = val;
+    return 0;
+}
+
+template <class TheData>
+bool Agent<TheData>::get_send_flag(){
+    // ToDo: check if *init* has been called
+    return m_sendFlag;
 }
 
 //
@@ -130,7 +149,6 @@ class SomeAgent : public Agent<Data>{
 	public:
 		unsigned int m_numberOfAgents;
 		double m_beaconFreq;
-		bool m_sendFlag;
 
 		int init(DataType* pInitialData, const unsigned int numberOfAgents, const double beaconFrequency){
  		       	m_pData = pInitialData;
@@ -149,19 +167,6 @@ class SomeAgent : public Agent<Data>{
 			m_received_from.clear();
 			return 0;
 		}
-
-		int set_send_flag(const bool val){
-			m_sendFlag = val;
-			return 0;
-		}
-
-		bool get_send_flag(){
-			// ToDo: check if *init* has been called
-			return m_sendFlag;
-		}
-
-
-
 };
 
 //forward declaration

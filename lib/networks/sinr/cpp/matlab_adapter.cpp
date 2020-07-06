@@ -155,11 +155,11 @@ public:
                         wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_15_4_europe(temperature));
                         break;
                     case WirelessProtocolEnum::underwater_mako_modem:
-			// Here are acutally further settings possible: shippingParameter, windParameter (currently using default values).
+                        // Here are acutally further settings possible: shippingParameter, windParameter (currently using default values).
                         wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::UnderwaterProtocol(SINR::Mako));
                         break;
                     case WirelessProtocolEnum::underwater_marlin_modem:
-			// Here are acutally further settings possible: shippingParameter, windParameter (currently using default values).
+                        // Here are acutally further settings possible: shippingParameter, windParameter (currently using default values).
                         wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::UnderwaterProtocol(SINR::Marlin));
                         break;  
                     case WirelessProtocolEnum::Unknown:
@@ -217,7 +217,7 @@ public:
                 
                 vec3 setVec = {0.0, 0.0, 0.0};
 
-		// [ds]: Is this actually intended?! 
+                // [ds]: Is this actually intended?! 
                 switch(dims[0]){
                     case 3:
                         setVec.x3 = position[2];
@@ -234,7 +234,7 @@ public:
             }
             case MethodCall::UpdateSendFlag:
             {
-	     //ToDo: Maybe integrate this call into *UpdateNetworkAgent*
+            //ToDo: Maybe integrate this call into *UpdateNetworkAgent*
 
             /* ***************
              *
@@ -253,13 +253,13 @@ public:
                 AgentID id = inputs[1][0];
 
                 // Agent's send flag
-		bool flag = inputs[2][0];
+                bool flag = inputs[2][0];
                 
                 // update agent's send_flag
                 pSim->m_pAgents.at(id-1)->set_send_flag(flag);
-     
-	    }
-
+                
+                break;
+            }
             case MethodCall::Process:
             {
                 pSim->process();
