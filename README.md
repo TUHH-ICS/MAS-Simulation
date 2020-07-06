@@ -28,7 +28,8 @@ There a three main steps to implementing a simulation within this project.
    The main work is in implementing the `step()` function that calculates a single discrete timestep for the agent and some minor work is in defining the projections `position` and `velocity`.
    This implementation can use the dynamic systems defined in [`lib/dynamics/`](lib/dynamics).
    For examples, see [`FlockingAgent`](examples/flocking/FlockingAgent.m) or [`FormationQuadrotor`](examples/lti_formation_control/FormationQuadrotor.m).
-3. Implement the main simulation loop by calling `Agent.simulate()` and `Network.process()` in lockstep.
+3. Implement the main simulation loop by calling `Agent.step()` and `Network.process()` in lockstep.
+   The [`SimulationManager`](lib/SimulationManager.m) can help you accomplish that, especially with multi rate simulations.
    At each timestep, you should save the current position of the agents if you want to animate their movement later on.
 
 ### Example Simulations

@@ -126,8 +126,8 @@ step_sampled  = tsout.length;
 figure()
 
 % Compute boundary
-x_pos  = squeeze(pos_resampled(:,1,:));
-y_pos  = squeeze(pos_resampled(:,2,:));
+x_pos  = squeeze(pos_history(:,1,:));
+y_pos  = squeeze(pos_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 % Open video file with mp4 encoding

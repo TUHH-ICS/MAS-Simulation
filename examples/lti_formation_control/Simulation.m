@@ -15,13 +15,32 @@ agentCount = 5;    % Number of agents in the network
 dimension  = 3;    % Dimension of the space the agents move in
 dT         = 0.01; % Size of the simulation time steps [s]
 Tf         = 3;    % Simulation time [s]
-range      = 150;  % Range of the radio communication
-pTransmit  = 0.95; % Probability of successful transmission
+
+% Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
+netType    = 3;
 
 %% Initialize the network
-Network = IdealNetwork(agentCount, dT, dimension, range);
-% Network = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+switch netType
+    case 1
+        range   = Inf;   % Range of the radio communication
+        Network = IdealNetwork(agentCount, dT, dimension, range);
+    case 2
+        range     = Inf; % Range of the radio communication
+        pTransmit = 0.1; % Probability of successful transmission
+        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+    case 3
+        config                  = SinrConfiguration();
+        config.agentCount       = agentCount;
+        config.slotCount        = agentCount;
+        config.cycleTime        = dT;
+        config.wirelessProtocol = WirelessProtocol.wp_802_11p;
+        config.power            = 500e-3;
+        config.packetSize       = 3*64;
+        enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
+        Network = SinrNetwork(config, enableSubstepping);
+end
 
+%% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
 % required constructor arguments, we first construct a cell array of agents
 % and later convert this to a standard Matlab array.
@@ -75,6 +94,26 @@ end
 % profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
+%% Resample data for plotting
+% Due to the multi-rate support, the sampling will not always be uniform.
+% Therefore, we need to resample the data. The resampling is oriented on
+% the set parameters of the video, that may be produced
+
+TVideo = 10; % Desired duration of the video [s]
+FPS    = 30; % Framerate of the video [Hz]
+
+% Calculate the required sampling time to meet the expectations
+dTAnimate = Tf / (TVideo * FPS);
+
+% Resample the data. The function uses a ZOH resampling approach 
+tsin  = timeseries(permute(pos_history, [2 3 1]), t_history);
+tsout = resample(tsin, 0:dTAnimate:Tf, 'zoh');
+
+% Extract the resampled data
+pos_resampled = permute(tsout.Data, [3 1 2]);
+t_resampled   = tsout.Time;
+step_sampled  = tsout.length;
+
 %% Animate simulation results
 figure()
 
@@ -87,14 +126,14 @@ bounds = @(x) [min(min(x)), max(max(x))];
 % Open video file with mp4 encoding
 if saveVideo
     video = VideoWriter('formation', 'MPEG-4');
-    video.FrameRate = 50;
+    video.FrameRate = FPS;
     open(video)
 else
     video = [];
 end
 
-for k = 1:steps
-    pos = squeeze(pos_history(k,:,:));
+for k = 1:step_sampled
+    pos = squeeze(pos_resampled(k,:,:));
     scatter3(pos(1,:), pos(2,:), pos(3,:))
     xlabel('x(t)')
     ylabel('y(t)')
@@ -117,18 +156,23 @@ if ~isempty(video)
     video = [];
 end
 
+t_bounds = bounds(t_history);
+
 figure()
 subplot(311)
 plot(t_history, x_pos)
+xlim(t_bounds);
 xlabel('Time t')
 ylabel('x(t)')
 
 subplot(312)
 plot(t_history, y_pos)
+xlim(t_bounds);
 xlabel('Time t')
 ylabel('y(t)')
 
 subplot(313)
 plot(t_history, z_pos)
+xlim(t_bounds);
 xlabel('Time t')
 ylabel('z(t)')
