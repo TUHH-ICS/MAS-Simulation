@@ -109,6 +109,8 @@ classdef SinrNetwork < BaseNetwork
                 % previously send from this agent since the last cycle will
                 % be overriden and thus get dropped.
                 obj.sentMessages{agent.id} = msg;
+                
+                callSinrNetwork('updateSendFlag', agent.id, true);
             end
         end
         

@@ -7,6 +7,9 @@ classdef WirelessProtocol
         wp_802_11n_mode_2   % N-Standard WLAN with high bitrate
         wp_802_11p          % Standard for car to car communication
         wp_802_15_4_europe  % Standard for wireless sensor networks
+ 	%cf. "Underwater Acoustic Modems", Sandra Sendra et al., IEEE Sensors Journal, 2016.
+        underwater_mako_modem   % 240 bits/s bitrate
+        underwater_marlin_modem % 480 bits/s bitrate
     end
 end
 

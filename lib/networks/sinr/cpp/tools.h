@@ -39,12 +39,14 @@ struct vec3{
 	double x2;
 	double x3;
 };
+
 void set_vec3(vec3& target, const vec3& source);
 
 
 double vec3_squared_dist(const vec3& a, const vec3& b);
 
 double vec3_dist(const vec3& a, const vec3& b);
+bool vec3_eq(const vec3& a, const vec3& b);
 
 vec3 vec3_sum(const vec3& a, const vec3& b);
 vec3 vec3_difference(const vec3& a, const vec3& b);
