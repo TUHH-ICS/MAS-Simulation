@@ -1,7 +1,7 @@
 classdef FormationUnicycle < BaseAgent
     
     properties(Constant)
-        epsilon = 0.001; % Convergence speed of the consensus protocol
+        epsilon = 0.005; % Convergence speed of the consensus protocol
     end
     
     properties(GetAccess = public, SetAccess = immutable)
@@ -14,11 +14,12 @@ classdef FormationUnicycle < BaseAgent
     
     properties(GetAccess = public, SetAccess = protected)
         consens  % State of the consensus protocol
+        t = 0    % Current time of the simulation
     end
     
     properties(GetAccess = private, SetAccess = immutable)
         dynamics % Discrete-time LTI agent dynamics
-        controller
+        controller % Dynamic output-feedback controller
     end
     
     % These properties have to be redefined from the superclass BaseAgent
@@ -91,14 +92,23 @@ classdef FormationUnicycle < BaseAgent
             % Receive messages from the network
             messages = obj.receive();
             
-            if ~isempty(messages)
-                % Calculate new formation reference. We use the normalized
-                % Laplacian, therefore we calculate the mean of the
-                % positions, not the sum
-                data        = [messages.data];
-                positions   = [data.position];
-                dist        = obj.consens - obj.ref - mean(positions, 2);
-                obj.consens = obj.consens - obj.epsilon * dist;
+            % This block implements a leader follower scheme. The agent
+            % with id 1 ignores all incomming messages but instead follows
+            % a pre-defined reference. It is thus the leader of the
+            % formation.
+            if obj.id == 1
+                obj.consens = [4*sin(2*pi*obj.t/100)
+                               8*sin(2*pi*obj.t/200)];
+            else
+                if ~isempty(messages)
+                    % Calculate new formation reference. We use the normalized
+                    % Laplacian, therefore we calculate the mean of the
+                    % positions, not the sum
+                    data        = [messages.data];
+                    positions   = [data.position];
+                    dist        = obj.consens - obj.ref - mean(positions, 2);
+                    obj.consens = obj.consens - obj.epsilon * dist;
+                end
             end
             
             % Extract state information from the unicycle model
@@ -120,6 +130,7 @@ classdef FormationUnicycle < BaseAgent
             % Evaluate controller equation
             u = obj.controller.step(rot * e, rho);
             obj.dynamics.step(u);
+            obj.t = obj.t + obj.dT;
                         
             % Send message to network, include only the position 
             data = struct;
