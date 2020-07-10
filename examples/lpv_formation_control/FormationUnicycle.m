@@ -1,14 +1,14 @@
-classdef FormationUnicycle < BaseAgent
+classdef FormationUnicycle < DynamicUnicycle
+    %FORMATIONUNICYCLE Agent implementation with a dynamic unicycle model.
+    %   These agents will perform a formation control maneuvre, where agent
+    %   1 acts as a leader and will guide the formation along a pre-defined
+    %   reference trajectory.
     
     properties(Constant)
         epsilon = 0.005; % Convergence speed of the consensus protocol
     end
     
     properties(GetAccess = public, SetAccess = immutable)
-        m   % Mass of the unicycle
-        Iz  % Moment of inertia
-        d   % Length of the handle
-        
         ref % Formation reference
     end
     
@@ -18,15 +18,7 @@ classdef FormationUnicycle < BaseAgent
     end
     
     properties(GetAccess = private, SetAccess = immutable)
-        dynamics % Discrete-time LTI agent dynamics
         controller % Dynamic output-feedback controller
-    end
-    
-    % These properties have to be redefined from the superclass BaseAgent
-    properties(Dependent, GetAccess = public, SetAccess = private)
-        position % Current position of the agent
-        velocity % Current velocity of the agent
-        state    % Dynamic state of the agent
     end
     
     methods
@@ -37,15 +29,7 @@ classdef FormationUnicycle < BaseAgent
             
             % Load data from synthesis script
             data = load('unicycle_controller');
-            
-            obj@BaseAgent(id, data.Ts);
-            obj.m  = data.m;
-            obj.Iz = data.Iz;
-            obj.d  = data.d;
-            
-            x0 = [ initialPos; zeros(3,1) ];
-            f = @(k, x, u) x + obj.dT * unicycleFun(obj.dT * k, x, u);
-            obj.dynamics = DiscreteNonlinearDynamics(f, [], x0);
+            obj@DynamicUnicycle(id, data.Ts, data.d, data.m, data.Iz, initialPos);
             
             % Build controller
             A = @(rho) data.Ak0 + rho * data.Ak1;
@@ -65,28 +49,6 @@ classdef FormationUnicycle < BaseAgent
                 obj.ref = reference;
             end
         end
-
-        function value = get.state(obj)
-            %GET.STATE Implementation of the dependent state property.
-            value = obj.dynamics.x;
-        end
-        
-        function value = get.position(obj)
-            %GET.POSITION Implementation of the dependent position
-            %property.
-            %   This function is simply a projection from the state space 
-            %   of the agents into the position space.
-            value = obj.dynamics.x(1:2);
-        end
-        
-        function value = get.velocity(obj)
-            %GET.VELOCITY Implementation of the dependent velocity
-            %property.
-            %   This function is simply a projection from the state space
-            %   of the agents into the velocity space.
-            dir = @(phi) [ cos(phi); sin(phi) ];
-            value = obj.dynamics.x(3) * dir(obj.dynamics.x(4));
-        end 
 
         function step(obj)
             % Receive messages from the network
@@ -112,8 +74,8 @@ classdef FormationUnicycle < BaseAgent
             end
             
             % Extract state information from the unicycle model
-            phi   = obj.dynamics.x(4);
-            omega = obj.dynamics.x(5);
+            phi   = obj.state(4);
+            omega = obj.state(5);
 
             % For the controller synthesis, we used a rotated frame of
             % reference for the agents. As these are state feedback
@@ -129,7 +91,7 @@ classdef FormationUnicycle < BaseAgent
             
             % Evaluate controller equation
             u = obj.controller.step(rot * e, rho);
-            obj.dynamics.step(u);
+            obj.move(u);
             obj.t = obj.t + obj.dT;
                         
             % Send message to network, include only the position 
@@ -138,19 +100,4 @@ classdef FormationUnicycle < BaseAgent
             obj.send(data)
         end
     end
-end
-
-function xdot = unicycleFun(~, x, u)
-    %UNICYCLEFUN ODE representation of a dynamic unicycle
-
-    m = 1; % Mass of the unicycle
-    I = 1; % Moment of inertia
-    d = 0.2; % Length of the handle
-
-    xdot    = zeros(size(x));
-    xdot(1) = x(3) * cos(x(4)) - x(5) * d * sin(x(4)); % qx
-    xdot(2) = x(3) * sin(x(4)) + x(5) * d * cos(x(4)); % qy
-    xdot(3) = u(1) / m;                                % v
-    xdot(4) = x(5);                                    % phi
-    xdot(5) = u(2) / I;                                % omega
 end
