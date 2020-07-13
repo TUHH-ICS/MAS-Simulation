@@ -23,8 +23,9 @@ classdef KinematicUnicycle < DynamicAgent
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.
             x0 = [ initialPos; 0];
-            f = @(k, x, u) x + dT * KinematicUnicycle.odeFun(dT * k, x, u, d);
-            dynamics = DiscreteNonlinearDynamics(f, [], x0);
+            f  = @(t, x, u) KinematicUnicycle.odeFun(t, x, u, d);
+            fd = nonlinearDiscretization(f, dT, 'euler');
+            dynamics = DiscreteNonlinearDynamics(fd, [], x0);
             
             obj@DynamicAgent(id, dT, dynamics);
             obj.d  = d;

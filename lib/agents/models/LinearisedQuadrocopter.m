@@ -53,10 +53,7 @@ classdef LinearisedQuadrocopter < DynamicAgent
                   0   0 1 0 ;
                   0   0 0 0 ;
                   0   0 0 1 ];
-            
-            % Perform Euler discretization
-            Ad = eye(size(A)) + dT * A;
-            Bd = dT * B;
+            [Ad, Bd] = ltiDiscretization(A, B, dT);
               
             % Construct discrete-time state space model
             x0 = [ kron(initialPos, [1; 0]); zeros(6,1) ];
