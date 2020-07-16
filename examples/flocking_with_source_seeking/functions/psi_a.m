@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+
 function psi_a = psi_a(z, flock_params)
 %PSI_A function that computes the interaction energy (sort of like stored 
 % potential energy) along each pair. Numerical integrates the gradient.

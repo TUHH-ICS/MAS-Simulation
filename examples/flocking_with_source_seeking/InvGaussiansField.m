@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+
 classdef InvGaussiansField
     %field_inv_gaussians 
     % This object defines an underlying scalar field as a sum of inverted

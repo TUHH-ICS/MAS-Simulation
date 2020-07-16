@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+
 function [y, gradient] = sigma_norm(z, epsilon)
 %SIGMA_NORM This is the smoothed "norm" introduced by Olfati-Saber to be
 %differentiable at 0.

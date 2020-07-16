@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+
 function []=post_process(dT,timesteps,Energy)
 % This function post-processes the data collected during simulation
 V=Energy.V;

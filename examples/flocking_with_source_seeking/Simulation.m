@@ -1,3 +1,9 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+%                   Christian Hespe <christian.hespe@tuhh.de>
+
 addpath(genpath('../../lib'))
 addpath('functions')
 

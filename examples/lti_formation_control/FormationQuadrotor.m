@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+
 classdef FormationQuadrotor < BaseAgent
     %FORMATIONQUADROTOR Quadrotor agent that performs a formation control
     %maneuvre in a group of agents.

@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+
 function [X,Y,Z]=data_for_contour(lim,inv_gauss_field)
 % This function creates mesh grid data for plotting contours based on the
 % underlying source field

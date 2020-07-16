@@ -1,3 +1,8 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+
 classdef DynamicAgent < BaseAgent
     %DYNAMICAGENT Class that simplifies implementing a dynamic agent model.
     %   In this class, the dynamics of the agent model are defined. The

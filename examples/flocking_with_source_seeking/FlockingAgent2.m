@@ -1,3 +1,9 @@
+% This file is part of a library for simulation of multi-agent systems
+% developed at the Institute of Control Systems at TUHH.
+%
+% Original Authors: Adwait Datar <adwait.datar@tuhh.de>
+%                   Christian Hespe <christian.hespe@tuhh.de>
+
 classdef FlockingAgent2 < BaseAgent
     %FLOCKINGAGENT2 Examplary implementation of double integrator agents
     %that perform a flocking manoeuvre augmented with a source seeking
