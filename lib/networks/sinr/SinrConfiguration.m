@@ -9,7 +9,7 @@ classdef SinrConfiguration < matlab.mixin.Copyable
     
     properties
         % Number of agents that communicate over the network
-        agentCount(1,1) {mustBeInteger, mustBePositive, mustBeLessThanOrEqual(agentCount, 50)} = 5
+        agentCount(1,1) {mustBeInteger, mustBePositive, mustBeLessThanOrEqual(agentCount, 1000)} = 5
         
         % Number of slots that are available for the agents to communicate
         slotCount(1,1) {mustBeInteger, mustBePositive} = 5

@@ -50,7 +50,7 @@ enum WirelessProtocolEnum {
 
 class MexFunction : public matlab::mex::Function {
 private:
-    static const unsigned MAX_AGENTS = 50;
+    static const unsigned MAX_AGENTS = 1000;
     
     // Would both be better if we use std::optional -> requires C++17
     std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>> memory;
