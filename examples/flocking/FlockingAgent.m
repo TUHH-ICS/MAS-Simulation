@@ -3,7 +3,7 @@
 %
 % Original Authors: Christian Hespe <christian.hespe@tuhh.de>
 
-classdef FlockingAgent < BaseAgent
+classdef FlockingAgent < DoubleIntegratorAgent
     %FLOCKINGAGENT Examplary implementation of double integrator agents
     %that perform a flocking manoeuvre.
     
@@ -16,48 +16,13 @@ classdef FlockingAgent < BaseAgent
         c_damp  = 3;   % Damping between agents / alignment rule
     end
     
-    % This agent implementation chooses not to use a predefined dynamics
-    % object, so it has to declare the state on its own.
-    properties(Access = private)
-        x        % Local variable for the agent state
-    end
-    
-    % These properties have to be redefined from the superclass BaseAgent
-    properties(Dependent, GetAccess = public, SetAccess = private)
-        position % Current position of the agent
-        velocity % Current velocity of the agent
-        state    % Dynamic state of the agent
-    end
-    
     methods     
         function obj = FlockingAgent(id, dT, initialPos, initialVel)
             %FLOCKINGAGENT Construct an instance of this class
             %   Initializes the state space to the given initial position
             %   and velocity.
             
-            obj@BaseAgent(id, dT);
-            obj.x = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
-        end
-        
-        function value = get.state(obj)
-            %GET.STATE Implementation of the dependent state property.
-            value = obj.x;
-        end
-        
-        function value = get.position(obj)
-            %GET.POSITION Implementation of the dependent position
-            %property.
-            %   This function is simply a projection from the state space 
-            %   of the agents into the position space.
-            value = [obj.x(1); obj.x(3)];
-        end
-        
-        function value = get.velocity(obj)
-            %GET.VELOCITY Implementation of the dependent velocity
-            %property.
-            %   This function is simply a projection from the state space
-            %   of the agents into the velocity space.
-            value = [obj.x(2); obj.x(4)];
+            obj@DoubleIntegratorAgent(id, dT, initialPos, initialVel);
         end
 
         function step(obj)
@@ -83,10 +48,7 @@ classdef FlockingAgent < BaseAgent
             end
             
             % Implement double integrator dynamics
-            obj.x(1) = obj.x(1) + obj.dT * obj.x(2);
-            obj.x(2) = obj.x(2) + obj.dT * u(1);
-            obj.x(3) = obj.x(3) + obj.dT * obj.x(4);
-            obj.x(4) = obj.x(4) + obj.dT * u(2);
+            obj.move(u);
             
             % Send message to network, include position and velocity
             data = struct;
