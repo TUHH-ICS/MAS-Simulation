@@ -20,10 +20,10 @@ rng(0);
 saveVideo = false;
 
 %% Network parameters
-agentCount = 50;   % Number of agents in the network
+agentCount = 150;  % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.01;  % Size of the simulation time steps [s]
-Tf         = 100;  % Simulation time [s]
+dT         = 0.03; % Size of the simulation time steps [s]
+Tf         = 50;   % Simulation time [s]
 
 % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
 netType    = 1;
@@ -42,12 +42,15 @@ switch netType
         config.agentCount       = agentCount;
         config.slotCount        = agentCount;
         config.cycleTime        = dT;
-        config.wirelessProtocol = WirelessProtocol.wp_802_11p;
+        config.wirelessProtocol = WirelessProtocol.wp_802_15_4_europe;
         config.power            = 500e-3;
         config.packetSize       = 6*64;
         enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
         Network = SinrNetwork(config, enableSubstepping);
 end
+
+%% Place obstacles
+obstacles = struct('center', {[150; 30], [150; 100]}, 'radius', {25, 25});
 
 %% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
@@ -55,16 +58,12 @@ end
 % and later convert this to a standard Matlab array.
 Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
-    % Randomly place the agents in the square [0,100]^2
-    pos = 50 + 100 * (rand(dimension, 1) - 0.5);
-    
-    % Point the agents to the center of the square at the start. In this
-    % way, the agents will not fragment into multiple groups. This is not
-    % required if a gamma agent would be included
-    vel = 0.01 * ([ 50; 50 ] - pos);
+    % Randomly place the agents in the square [0, 120]^2
+    pos = 60 + 120 * (rand(dimension, 1) - 0.5);
+    vel = zeros(dimension, 1);
     
     % Initiallize an agent with the generated initial conditions
-    Agents{i} = FlockingAgent(Network.getId(), dT, pos, vel);
+    Agents{i} = ObstacleAvoidingAgent(Network.getId(), dT, pos, vel, obstacles);
 end
 Agents = [Agents{:}];
 
@@ -145,9 +144,18 @@ else
 end
 
 for k = 1:step_sampled
+    % Draw agents
     pos = squeeze(pos_resampled(k,:,:));
     scatter(pos(1,:), pos(2,:))
     
+    % Draw obstacles
+    hold on
+    for obst = obstacles
+        drawCircle(obst.center, obst.radius, true);
+    end
+    hold off
+    
+    % Limit viewpoint
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))
     drawnow limitrate

@@ -10,10 +10,15 @@ classdef FlockingAgent < DoubleIntegratorAgent
     % Define constants of the flocking protocol
     properties(Constant)
         epsilon = 0.1; % Used to define the sigma_norm
-        da      = 7;   % Equilibrium distance(or desired distance) to neighbours
-        ra      = 1.2 * FlockingAgent.da; % Sensing radius (no interaction with agents outside ra disc)
-        h       = 0.9; % Bump function goes to zero after h
-        c_damp  = 3;   % Damping between agents / alignment rule
+        d       = 7;   % Equilibrium distance(or desired distance) to neighbours
+        r       = 1.2 * FlockingAgent.d; % Sensing radius (no interaction with agents outside ra disc)
+        ha      = 0.9; % Bump function coefficient for alpha agents
+                
+        da      = sigma_norm(FlockingAgent.d, FlockingAgent.epsilon)
+        ra      = sigma_norm(FlockingAgent.r, FlockingAgent.epsilon)
+        
+        c1_a    = 1;   % P coefficient for the other alpha agents
+        c2_a    = 2*sqrt(FlockingAgent.c1_a); % PD coefficient for the other alpha agents
     end
     
     methods     
@@ -37,17 +42,18 @@ classdef FlockingAgent < DoubleIntegratorAgent
                                           FlockingAgent.epsilon);
                               
                 % Calculate force on the agent from the virtual potential field
-                u = u + grad * phi_alpha(dist, FlockingAgent.ra,...
-                                         FlockingAgent.da, FlockingAgent.h);
+                u = u + FlockingAgent.c1_a...
+                       * grad * phi_alpha(dist, FlockingAgent.ra,...
+                                          FlockingAgent.da, FlockingAgent.ha);
                                      
                 % Compute position dependent adjacency element
-                a = rho_h(dist / FlockingAgent.ra, FlockingAgent.h);
+                a = rho_h(dist / FlockingAgent.ra, FlockingAgent.ha);
                 
                 % Calculate alignment force
-                u = u + FlockingAgent.c_damp * a * (message.data.velocity - obj.velocity);
+                u = u + FlockingAgent.c2_a * a * (message.data.velocity - obj.velocity);
             end
             
-            % Implement double integrator dynamics
+            % Evaluate double integrator dynamics
             obj.move(u);
             
             % Send message to network, include position and velocity
