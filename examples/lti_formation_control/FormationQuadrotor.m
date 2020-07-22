@@ -3,79 +3,40 @@
 %
 % Original Authors: Christian Hespe <christian.hespe@tuhh.de>
 
-classdef FormationQuadrotor < BaseAgent
+classdef FormationQuadrotor < LinearisedQuadrocopter
     %FORMATIONQUADROTOR Quadrotor agent that performs a formation control
     %maneuvre in a group of agents.
-    %   The agent dynamics are approximated as a LTI system using Jacobian
-    %   linearization. See ATC exercise 6.3).
     
     properties(GetAccess = public, SetAccess = immutable)
-        ref      % Formation reference
+        ref        % Formation reference
     end
     
     properties(GetAccess = private, SetAccess = immutable)
-        dynamics % Discrete-time LTI agent dynamics
-    end
-    
-    % These properties have to be redefined from the superclass BaseAgent
-    properties(Dependent, GetAccess = public, SetAccess = private)
-        position % Current position of the agent
-        velocity % Current velocity of the agent
-        state    % Dynamic state of the agent
+        controller % Discrete-time LTI controller
     end
     
     methods
-        function obj = FormationQuadrotor(id, dT, initialPos, reference)
+        function obj = FormationQuadrotor(id, initialPos, reference)
             %FORMATIONQUADROTOR Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
             
-            obj@BaseAgent(id, dT);
-            
-            % Import quadrotor model and controller
             data = load('quadrotor_model');
             
-            % Build closed-loop dynamic system
-            CL   = lft(data.Paug*data.K, -eye(length(eig(data.Paug))));
-            x0 = [ kron(initialPos, [1; 0]); zeros(25,1) ];
+            % Initialize quadrotor model
+            initialVel = zeros(size(initialPos));
+            obj@LinearisedQuadrocopter(id, data.Ts, data.m, initialPos, initialVel);
             
-            discrete = true;
-            if discrete
-                dCL  = c2d(CL, dT);
-                [A,B] = ssdata(dCL);
-                obj.dynamics = DiscreteLtiDynamics(A, B, [], [], x0);
-            else
-                [A,B] = ssdata(CL);
-                obj.dynamics = ContinuousLtiDynamics(dT, A, B, [], [], x0);
-            end
+            % Assemble controller
+            [Ad, Bd, Cd, Dd] = ssdata(data.K);
+            obj.controller = DiscreteLtiDynamics(Ad, Bd, Cd, Dd);
                 
             % Set the formation reference if one is given to the agent
-            if nargin <= 3
+            if nargin <= 2
                 obj.ref = zeros(size(initialPos));
             else
                 obj.ref = reference;
             end
-        end
-        
-        function value = get.state(obj)
-            %GET.STATE Implementation of the dependent state property.
-            value = obj.dynamics.x;
-        end
-        
-        function value = get.position(obj)
-            %GET.POSITION Implementation of the dependent position
-            %property.
-            %   This function is simply a projection from the state space 
-            %   of the agents into the position space.
-            value = [obj.dynamics.x(1); obj.dynamics.x(3); obj.dynamics.x(5)];
-        end
-        
-        function value = get.velocity(obj)
-            %GET.VELOCITY Implementation of the dependent velocity
-            %property.
-            %   This function is simply a projection from the state space
-            %   of the agents into the velocity space.
-            value = [obj.dynamics.x(2); obj.dynamics.x(4); obj.dynamics.x(6)];
         end
         
         function step(obj)
@@ -94,7 +55,9 @@ classdef FormationQuadrotor < BaseAgent
             end
             
             % Evaluate agent dynamics
-            obj.dynamics.step(dist);
+            e_hat = [dist; -obj.state];
+            u     = obj.controller.step(e_hat);
+            obj.move(u);
             
             % Send message to network, include only the position 
             data = struct;

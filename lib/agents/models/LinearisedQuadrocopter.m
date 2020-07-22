@@ -28,12 +28,13 @@ classdef LinearisedQuadrocopter < DynamicAgent
     end
     
     methods
-        function obj = LinearisedQuadrocopter(id, dT, m, initialPos)
+        function obj = LinearisedQuadrocopter(id, dT, m, initialPos, initialVel)
             %LINEARISEDQUADROCOPTER Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent with the correct initial position.
                         
             % Define continuous-time state-space matrices
+            g = LinearisedQuadrocopter.g;
             A = [ 0 1 0 0 0 0 0 0  0 0 0 0 ;  % x
                   0 0 0 0 0 0 0 0 -g 0 0 0 ;  % xdot
                   0 0 0 1 0 0 0 0  0 0 0 0 ;  % y
@@ -49,7 +50,7 @@ classdef LinearisedQuadrocopter < DynamicAgent
             B = [ 0   0 0 0 ;
                   0   0 0 0 ;
                   0   0 0 0 ;
-                  0   0 1 0 ;
+                  0   0 0 0 ;
                   0   0 0 0 ;
                   1/m 0 0 0 ;
                   0   0 0 0 ;
@@ -61,7 +62,7 @@ classdef LinearisedQuadrocopter < DynamicAgent
             [Ad, Bd] = ltiDiscretization(A, B, dT);
               
             % Construct discrete-time state space model
-            x0 = [ kron(initialPos, [1; 0]); zeros(6,1) ];
+            x0 = [ kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]); zeros(6,1) ];
             dynamics = DiscreteLtiDynamics(Ad, Bd, [], [], x0);
             
             obj@DynamicAgent(id, dT, dynamics);

@@ -56,7 +56,7 @@ for i = 1:length(Agents)
     
     % Initialize an agent with the generated initial conditions
 %     Agents{i} = FormationAgent(Network.getId(), dT, pos, [i^2; 0; 0]);
-    Agents{i} = FormationQuadrotor(Network.getId(), dT, pos, [i^2; 0; 0]);
+    Agents{i} = FormationQuadrotor(Network.getId(), pos, [i^2; 0; 0]);
 end
 Agents = [Agents{:}];
 
