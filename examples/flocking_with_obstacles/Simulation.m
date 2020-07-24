@@ -31,11 +31,11 @@ netType    = 1;
 %% Initialize the network
 switch netType
     case 1
-        range   = 10;      % Range of the radio communication
+        range   = 10;     % Range of the radio communication
         Network = IdealNetwork(agentCount, dT, dimension, range);
     case 2
-        range     = 10;    % Range of the radio communication
-        pTransmit = 0.95; % Probability of successful transmission
+        range     = 10;   % Range of the radio communication
+        pTransmit = 0.5;  % Probability of successful transmission
         Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
     case 3
         config                  = SinrConfiguration();
@@ -106,6 +106,9 @@ end
 % profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
+[~, ~, distinctCollisions] = checkCollisions(pos_history, 0.5);
+fprintf("%d destinct collisions occurred!\n", distinctCollisions);
+
 %% Resample data for plotting
 % Due to the multi-rate support, the sampling will not always be uniform.
 % Therefore, we need to resample the data. The resampling is oriented on
@@ -134,9 +137,12 @@ x_pos  = squeeze(pos_history(:,1,:));
 y_pos  = squeeze(pos_history(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
+% Compute resampled collisions
+[filter, collisionCount] = checkCollisions(pos_resampled, 0.5);
+
 % Open video file with mp4 encoding
 if saveVideo
-    video = VideoWriter('flocking', 'MPEG-4');
+    video = VideoWriter('obstacles', 'MPEG-4');
     video.FrameRate = FPS;
     open(video)
 else
@@ -146,7 +152,12 @@ end
 for k = 1:step_sampled
     % Draw agents
     pos = squeeze(pos_resampled(k,:,:));
-    scatter(pos(1,:), pos(2,:))
+    
+    mask = filter(k,:);
+    scatter(pos(1,~mask), pos(2,~mask), 'k')
+    hold on
+    scatter(pos(1,mask), pos(2,mask), 'r', 'filled')
+    hold off
     
     % Draw obstacles
     hold on
@@ -171,3 +182,8 @@ if ~isempty(video)
     close(video)
     video = [];
 end
+
+figure()
+plot(t_resampled, collisionCount);
+xlabel('Time t')
+ylabel('Number of collisions')
