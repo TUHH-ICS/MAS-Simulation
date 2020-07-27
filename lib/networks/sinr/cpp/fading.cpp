@@ -96,6 +96,7 @@ void NakagamiFading::sample_by_slot(const std::vector<AgentID>& sendingAgents, c
 
 // ############## BEGIN: WirelessProtocolParameters ##############
 
+WirelessProtocolParameters::~WirelessProtocolParameters(){}; 
 double WirelessProtocolParameters::path_loss(const vec3& u, const vec3& v, const double pathLossCoeff){
 	return std::pow(TLS::vec3_dist(u,v), pathLossCoeff);
 }

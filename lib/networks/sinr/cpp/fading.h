@@ -77,14 +77,15 @@ class WirelessProtocolParameters{
 
 
 		WirelessProtocolParameters(const double freq, const double channelCapacity, const double channelBandwidth, const double temperature, const double c = 299792458) : m_freq(freq), m_channelCapacity(channelCapacity), m_channelBandwidth(channelBandwidth), m_temperature(temperature), m_c(c), m_boltzmannConst(1.38064852e-23), m_bitrate(channelCapacity){};
+		virtual ~WirelessProtocolParameters() = 0;
 
- 		double adapt_power(double power);
-		double path_loss(const vec3& u, const vec3& v, const double pathLossCoeff); 
-		double noise();
-		double wavelength();
-		double sinr_threshold();
-		double get_far_field_distance(const double antennaDimension, const unsigned int k = 5);
-		void set_bitrate(const double& bitrate);
+ 		virtual double adapt_power(double power);
+		virtual double path_loss(const vec3& u, const vec3& v, const double pathLossCoeff); 
+		virtual double noise();
+		virtual double wavelength();
+		virtual double sinr_threshold();
+		virtual double get_far_field_distance(const double antennaDimension, const unsigned int k = 5);
+		void virtual set_bitrate(const double& bitrate);
 
 };
 
