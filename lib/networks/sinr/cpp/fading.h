@@ -85,7 +85,7 @@ class WirelessProtocolParameters{
 		virtual double wavelength();
 		virtual double sinr_threshold();
 		virtual double get_far_field_distance(const double antennaDimension, const unsigned int k = 5);
-		void virtual set_bitrate(const double& bitrate);
+		virtual void set_bitrate(const double& bitrate);
 
 };
 
