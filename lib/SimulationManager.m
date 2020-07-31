@@ -10,6 +10,10 @@ classdef(Sealed) SimulationManager < handle
     %   heterogeneous sample times among the agents and the network. The
     %   sample times do not need to be integer multiples.
     
+    properties(GetAccess = public, SetAccess = public)
+        lastLaplacian   % Last value of the networks Laplacian matrix
+    end
+    
     properties(GetAccess = public, SetAccess = private)
         nextAgentCall   % Contains the time when each agent should be called next
         nextNetworkCall % Contains the time when the network should be called next
@@ -99,7 +103,8 @@ classdef(Sealed) SimulationManager < handle
 
                 % Process sent messages in the network
                 recvMessages = obj.network.process();
-
+                obj.lastLaplacian = calculateLaplacian(recvMessages);
+                
                 % Distribute transmitted messages among the agents
                 mask = ~cellfun(@isempty, recvMessages);
                 for agent = obj.agents(mask)

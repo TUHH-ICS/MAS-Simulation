@@ -20,13 +20,13 @@ rng(0);
 saveVideo = false;
 
 %% Network parameters
-agentCount = 150;  % Number of agents in the network
+agentCount = 50;  % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.03; % Size of the simulation time steps [s]
+dT         = 0.2; % Size of the simulation time steps [s]
 Tf         = 50;   % Simulation time [s]
 
 % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
-netType    = 1;
+netType    = 3;
 
 %% Initialize the network
 switch netType
@@ -34,23 +34,24 @@ switch netType
         range   = 10;     % Range of the radio communication
         Network = IdealNetwork(agentCount, dT, dimension, range);
     case 2
-        range     = 10;   % Range of the radio communication
+        range     = Inf;   % Range of the radio communication
         pTransmit = 0.5;  % Probability of successful transmission
         Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
     case 3
         config                  = SinrConfiguration();
         config.agentCount       = agentCount;
-        config.slotCount        = agentCount;
+        config.slotCount        = 4;
         config.cycleTime        = dT;
-        config.wirelessProtocol = WirelessProtocol.wp_802_15_4_europe;
-        config.power            = 500e-3;
-        config.packetSize       = 6*64;
+        config.wirelessProtocol = WirelessProtocol.underwater_mako_modem;
+        config.power            = 1.8e-2;
+        config.packetSize       = 4*16;
+        config.pathLoss         = 2.3;
         enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
         Network = SinrNetwork(config, enableSubstepping);
 end
 
 %% Place obstacles
-obstacles = struct('center', {[150; 30], [150; 100]}, 'radius', {25, 25});
+obstacles = struct('center', {[75; 10], [75; 50]}, 'radius', {10, 10});
 
 %% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
@@ -59,7 +60,7 @@ obstacles = struct('center', {[150; 30], [150; 100]}, 'radius', {25, 25});
 Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
     % Randomly place the agents in the square [0, 120]^2
-    pos = 60 + 120 * (rand(dimension, 1) - 0.5);
+    pos = 25 + 50 * (rand(dimension, 1) - 0.5);
     vel = zeros(dimension, 1);
     
     % Initiallize an agent with the generated initial conditions
@@ -78,10 +79,12 @@ steps = sim.estimateSteps(Tf);
 % Preallocate storage for simulation results
 t_history   = zeros(steps, 1);
 pos_history = zeros(steps, dimension, agentCount);
+lap_history = zeros(floor(Tf/dT) + 1, agentCount, agentCount);
 
 % Initialize remaining values for the simulation
 t = 0;
 k = 0;
+k_lap = 1;
 
 % Save start time of the simulation. We want to periodically print the
 % progress of the simulation.
@@ -97,6 +100,12 @@ while t < Tf
     t_history(k)       = t;
     pos_history(k,:,:) = [Agents.position];
 
+    if ~isempty(sim.lastLaplacian)
+        lap_history(k_lap,:,:) = sim.lastLaplacian;
+        sim.lastLaplacian = [];
+        k_lap = k_lap + 1;
+    end
+    
     % Print progress every 2 seconds
     if posixtime(datetime('now')) - lastprint >= 1
         lastprint = posixtime(datetime('now'));
@@ -130,7 +139,6 @@ t_resampled   = tsout.Time;
 step_sampled  = tsout.length;
 
 %% Animate simulation results
-figure()
 
 % Compute boundary
 x_pos  = squeeze(pos_history(:,1,:));
@@ -149,6 +157,7 @@ else
     video = [];
 end
 
+figure()
 for k = 1:step_sampled
     % Draw agents
     pos = squeeze(pos_resampled(k,:,:));
@@ -187,3 +196,11 @@ figure()
 plot(t_resampled, collisionCount);
 xlabel('Time t')
 ylabel('Number of collisions')
+
+meanL = movmean(lap_history, 10, 1);
+
+figure()
+for i = 1:size(meanL, 1)
+    imshow(-squeeze(meanL(i,:,:)), 'InitialMagnification', 'fit')
+    drawnow limitrate
+end

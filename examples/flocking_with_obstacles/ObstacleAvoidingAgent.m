@@ -21,9 +21,9 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
         ha      = 0.2;  % Bump function coefficient for alpha agents
         hb      = 0.9;  % Bump function coefficient for beta agents
         
-        c1_a    = 10; % P coefficient for the other alpha agents
-        c1_b    = 45; % P coefficient for any obstacles
-        c1_g    = 12; % P coefficient for feedback from gamma agent 
+        c1_a    = 1;   % P coefficient for the other alpha agents
+        c1_b    = 4.5; % P coefficient for any obstacles
+        c1_g    = 1.2; % P coefficient for feedback from gamma agent 
 
         da      = sigma_norm(ObstacleAvoidingAgent.d, ObstacleAvoidingAgent.epsilon)
         db      = sigma_norm(ObstacleAvoidingAgent.dprime, ObstacleAvoidingAgent.epsilon)
@@ -51,8 +51,8 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
             
             obj@DoubleIntegratorAgent(id, dT, initialPos, initialVel);
             
-            obj.q_gamma = [ 230; 60 ];
-            obj.p_gamma = [   6;  0 ];
+            obj.q_gamma = [ 60; 25 ];
+            obj.p_gamma = [  4;  0 ];
             
             if nargin <= 4
                 obj.obstacles = [];
