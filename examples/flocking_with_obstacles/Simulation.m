@@ -43,11 +43,13 @@ switch netType
         config.slotCount        = 4;
         config.cycleTime        = dT;
         config.wirelessProtocol = WirelessProtocol.underwater_mako_modem;
-        config.power            = 1.8e-2;
+        config.power            = 5e-2;
         config.packetSize       = 4*16;
         config.pathLoss         = 2.3;
         enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
         Network = SinrNetwork(config, enableSubstepping);
+        
+        fprintf('The datarate of the network is %d bits/s\n', config.packetSize / config.slotTime);
 end
 
 %% Place obstacles

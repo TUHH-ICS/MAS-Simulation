@@ -105,7 +105,7 @@ classdef SinrNetwork < BaseNetwork
             %   it wants to transmit a message.
             
             % Call into the C++ library to update the agent positions
-            callSinrNetwork('updateNetworkAgent', agent.id, agent.position)
+            callSinrNetwork('updateNetworkAgent', agent.id, double(agent.position))
             
             % Check if the agent wants to transmit
             msg = agent.getMessage();

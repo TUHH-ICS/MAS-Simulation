@@ -120,10 +120,13 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
             % Evaluate double integrator dynamics
             obj.move(u);
             
-            % Send message to network, include position and velocity
+            % Send message to network, include position and velocity.
+            % The size of the data is truncated to 16 bits but converted
+            % back to double precision to avoid converting all values of
+            % the simulation to half precision floating point values.
             data = struct;
-            data.position = obj.position;
-            data.velocity = obj.velocity;
+            data.position = double(half(obj.position));
+            data.velocity = double(half(obj.velocity));
             obj.send(data)
         end
     end
