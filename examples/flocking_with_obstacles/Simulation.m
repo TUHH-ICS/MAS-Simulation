@@ -79,8 +79,7 @@ sim   = SimulationManager(Network, Agents);
 steps = sim.estimateSteps(Tf);
 
 % Preallocate storage for simulation results
-t_history   = zeros(steps, 1);
-pos_history = zeros(steps, dimension, agentCount);
+leech = DataLeech(Agents, steps, 'position');
 lap_history = zeros(floor(Tf/dT) + 1, agentCount, agentCount);
 
 % Initialize remaining values for the simulation
@@ -99,8 +98,7 @@ while t < Tf
     k = k + 1;
     
     % Save current position of all agents
-    t_history(k)       = t;
-    pos_history(k,:,:) = [Agents.position];
+    leech.save(t);
 
     if ~isempty(sim.lastLaplacian)
         lap_history(k_lap,:,:) = sim.lastLaplacian;
@@ -117,7 +115,7 @@ end
 % profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
-[~, ~, distinctCollisions] = checkCollisions(pos_history, 0.5);
+[~, ~, distinctCollisions] = checkCollisions(leech.data.position, 0.5);
 fprintf("%d destinct collisions occurred!\n", distinctCollisions);
 
 %% Resample data for plotting
@@ -131,24 +129,19 @@ FPS    = 30; % Framerate of the video [Hz]
 % Calculate the required sampling time to meet the expectations
 dTAnimate = Tf / (TVideo * FPS);
 
-% Resample the data. The function uses a ZOH resampling approach 
-tsin  = timeseries(permute(pos_history, [2 3 1]), t_history);
-tsout = resample(tsin, 0:dTAnimate:Tf, 'zoh');
-
-% Extract the resampled data
-pos_resampled = permute(tsout.Data, [3 1 2]);
-t_resampled   = tsout.Time;
-step_sampled  = tsout.length;
+% Calculate the required sampling time to meet the expectations
+dTAnimate = Tf / (TVideo * FPS);
+[t_sampled, sampled] = leech.resample(dTAnimate);
 
 %% Animate simulation results
 
 % Compute boundary
-x_pos  = squeeze(pos_history(:,1,:));
-y_pos  = squeeze(pos_history(:,2,:));
+x_pos  = squeeze(leech.data.position(:,1,:));
+y_pos  = squeeze(leech.data.position(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 % Compute resampled collisions
-[filter, collisionCount] = checkCollisions(pos_resampled, 0.5);
+[filter, collisionCount] = checkCollisions(sampled.position, 0.5);
 
 % Open video file with mp4 encoding
 if saveVideo
@@ -160,9 +153,9 @@ else
 end
 
 figure()
-for k = 1:step_sampled
+for k = 1:length(t_sampled)
     % Draw agents
-    pos = squeeze(pos_resampled(k,:,:));
+    pos = squeeze(sampled.position(k,:,:));
     
     mask = filter(k,:);
     scatter(pos(1,~mask), pos(2,~mask), 'k')
@@ -193,11 +186,6 @@ if ~isempty(video)
     close(video)
     video = [];
 end
-
-figure()
-plot(t_resampled, collisionCount);
-xlabel('Time t')
-ylabel('Number of collisions')
 
 meanL = movmean(lap_history, 10, 1);
 

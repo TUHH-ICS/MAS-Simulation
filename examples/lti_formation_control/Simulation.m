@@ -69,8 +69,7 @@ sim   = SimulationManager(Network, Agents);
 steps = sim.estimateSteps(Tf);
 
 % Preallocate storage for simulation results
-t_history   = zeros(steps, 1);
-pos_history = zeros(steps, dimension, agentCount);
+leech = DataLeech(Agents, steps, 'position');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -87,8 +86,7 @@ while t < Tf
     k = k + 1;
     
     % Save current position of all agents
-    t_history(k)       = t;
-    pos_history(k,:,:) = [Agents.position];
+    leech.save(t)
 
     % Print progress every 2 seconds
     if posixtime(datetime('now')) - lastprint >= 1
@@ -111,21 +109,15 @@ FPS    = 30; % Framerate of the video [Hz]
 dTAnimate = Tf / (TVideo * FPS);
 
 % Resample the data. The function uses a ZOH resampling approach 
-tsin  = timeseries(permute(pos_history, [2 3 1]), t_history);
-tsout = resample(tsin, 0:dTAnimate:Tf, 'zoh');
-
-% Extract the resampled data
-pos_resampled = permute(tsout.Data, [3 1 2]);
-t_resampled   = tsout.Time;
-step_sampled  = tsout.length;
+[t_sampled, sampled] = leech.resample(dTAnimate);
 
 %% Animate simulation results
 figure()
 
 % Compute boundary
-x_pos  = squeeze(pos_history(:,1,:));
-y_pos  = squeeze(pos_history(:,2,:));
-z_pos  = squeeze(pos_history(:,3,:));
+x_pos  = squeeze(leech.data.position(:,1,:));
+y_pos  = squeeze(leech.data.position(:,2,:));
+z_pos  = squeeze(leech.data.position(:,3,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 % Open video file with mp4 encoding
@@ -137,8 +129,8 @@ else
     video = [];
 end
 
-for k = 1:step_sampled
-    pos = squeeze(pos_resampled(k,:,:));
+for k = 1:length(t_sampled)
+    pos   = squeeze(sampled.position(k,:,:));
     scatter3(pos(1,:), pos(2,:), pos(3,:))
     xlabel('x(t)')
     ylabel('y(t)')
@@ -161,23 +153,23 @@ if ~isempty(video)
     video = [];
 end
 
-t_bounds = bounds(t_history);
+t_bounds = bounds(leech.t);
 
 figure()
 subplot(311)
-plot(t_history, x_pos)
+plot(leech.t, x_pos)
 xlim(t_bounds);
 xlabel('Time t')
 ylabel('x(t)')
 
 subplot(312)
-plot(t_history, y_pos)
+plot(leech.t, y_pos)
 xlim(t_bounds);
 xlabel('Time t')
 ylabel('y(t)')
 
 subplot(313)
-plot(t_history, z_pos)
+plot(leech.t, z_pos)
 xlim(t_bounds);
 xlabel('Time t')
 ylabel('z(t)')

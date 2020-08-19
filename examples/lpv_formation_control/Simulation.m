@@ -73,10 +73,7 @@ sim   = SimulationManager(Network, Agents);
 steps = sim.estimateSteps(Tf);
 
 % Preallocate storage for simulation results
-t_history   = zeros(steps, 1);
-pos_history = zeros(steps, dimension, agentCount);
-cns_history = zeros(steps, dimension, agentCount);
-phi_history = zeros(steps, agentCount);
+leech = DataLeech(Agents, steps, 'position', 'consens', 'state');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -93,11 +90,7 @@ while t < Tf
     k = k + 1;
     
     % Save current position of all agents
-    t_history(k)       = t;
-    pos_history(k,:,:) = [Agents.position];
-    cns_history(k,:,:) = [Agents.consens];
-    states             = [Agents.state];
-    phi_history(k,:)   = states(4,:);
+    leech.save(t);
 
     % Print progress every 2 seconds
     if posixtime(datetime('now')) - lastprint >= 1
@@ -120,27 +113,16 @@ FPS    = 30; % Framerate of the video [Hz]
 dTAnimate = Tf / (TVideo * FPS);
 
 % Resample the data. The function uses a ZOH resampling approach 
-ts_pos  = timeseries(permute(pos_history, [2 3 1]), t_history, 'Name', 'position');
-ts_cns  = timeseries(permute(cns_history, [2 3 1]), t_history, 'Name', 'consensus');
-ts_phi  = timeseries(phi_history', t_history, 'Name', 'phi');
-ts = tscollection({ts_pos, ts_cns, ts_phi});
-tsout = resample(ts, 0:dTAnimate:Tf, 'zoh');
-
-% Extract the resampled data
-pos_resampled = permute(tsout.position.Data, [3 1 2]);
-cns_resampled = permute(tsout.consensus.Data, [3 1 2]);
-phi_resampled = squeeze(tsout.phi.Data)';
-t_resampled   = tsout.position.Time;
-step_sampled  = tsout.position.length;
+[t_sampled, sampled] = leech.resample(dTAnimate);
 
 %% Animate simulation results
 figure()
 
 % Compute boundary
-x_pos  = squeeze(pos_history(:,1,:));
-x_cns  = squeeze(cns_history(:,1,:));
-y_pos  = squeeze(pos_history(:,2,:));
-y_cns  = squeeze(cns_history(:,2,:));
+x_pos  = squeeze(leech.data.position(:,1,:));
+x_cns  = squeeze(leech.data.consens(:,1,:));
+y_pos  = squeeze(leech.data.position(:,2,:));
+y_cns  = squeeze(leech.data.consens(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 x_bounds = bounds([x_pos; x_cns]);
@@ -158,10 +140,10 @@ end
 rad = linspace(0, 2*pi);
 ref = [4*sin(2*rad); 8*sin(rad)];
 
-for k = 1:step_sampled
-    pos = squeeze(pos_resampled(k,:,:));
-    cns = squeeze(cns_resampled(k,:,:));
-    phi = phi_resampled(k,:);
+for k = 1:length(t_sampled)
+    pos = squeeze(sampled.position(k,:,:));
+    cns = squeeze(sampled.consens(k,:,:));
+    phi = squeeze(sampled.state(k,4,:))';
     
     cycledir = [cos(phi); sin(phi)];
     cg = pos - [Agents.d] .* cycledir;
@@ -194,17 +176,17 @@ if ~isempty(video)
     video = [];
 end
 
-t_bounds = bounds(t_history);
+t_bounds = bounds(leech.t);
 
 figure()
 subplot(211)
-plot(t_history, x_cns, '--', t_history, x_pos, '-')
+plot(leech.t, x_cns, '--', leech.t, x_pos, '-')
 xlim(t_bounds);
 xlabel('Time t')
 ylabel('x(t)')
 
 subplot(212)
-plot(t_history, y_cns, '--', t_history, y_pos, '-')
+plot(leech.t, y_cns, '--', leech.t, y_pos, '-')
 xlim(t_bounds);
 xlabel('Time t')
 ylabel('y(t)')
