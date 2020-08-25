@@ -116,7 +116,7 @@ end
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
 [~, ~, distinctCollisions] = checkCollisions(leech.data.position, 0.5);
-fprintf("%d destinct collisions occurred!\n", distinctCollisions);
+fprintf("%d distinct collisions occurred!\n", distinctCollisions);
 
 %% Resample data for plotting
 % Due to the multi-rate support, the sampling will not always be uniform.

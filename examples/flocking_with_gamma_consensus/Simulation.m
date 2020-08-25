@@ -21,9 +21,9 @@ saveVideo = false;
 
 %% Network parameters
 agentCount = 50;  % Number of agents in the network
-dimension  = 2;    % Dimension of the space the agents move in
+dimension  = 2;   % Dimension of the space the agents move in
 dT         = 0.2; % Size of the simulation time steps [s]
-Tf         = 50;   % Simulation time [s]
+Tf         = 50;  % Simulation time [s]
 
 % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
 netType    = 3;
@@ -35,7 +35,7 @@ switch netType
         Network = IdealNetwork(agentCount, dT, dimension, range);
     case 2
         range     = 10;   % Range of the radio communication
-        pTransmit = 0.5;  % Probability of successful transmission
+        pTransmit = 0.05;  % Probability of successful transmission
         Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
     case 3
         config                  = SinrConfiguration();
@@ -120,7 +120,7 @@ end
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
 [~, ~, distinctCollisions] = checkCollisions(leech.data.position, 0.5);
-fprintf("%d destinct collisions occurred!\n", distinctCollisions);
+fprintf("%d distinct collisions occurred!\n", distinctCollisions);
 
 %% Resample data for plotting
 % Due to the multi-rate support, the sampling will not always be uniform.
