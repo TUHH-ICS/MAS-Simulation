@@ -40,9 +40,16 @@ classdef DynamicAgent < BaseAgent
         function move(obj, u)
             %MOVE Calling this function once takes the agent forward in
             %time by one time step.
+            %   The control signal u might be dropped when calling this
+            %   method if its identical to the previous sampling instance.
+            %   It must always be given on the first call to this method!
             
-            obj.u = u;
-            obj.dynamics.step(u);
+            % Update the control signal, if one is given
+            if nargin >= 2
+                obj.u = u;
+            end
+            
+            obj.dynamics.step(obj.u);
         end
     end
 end
