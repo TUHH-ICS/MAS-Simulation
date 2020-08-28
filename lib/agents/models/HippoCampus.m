@@ -59,8 +59,7 @@ classdef HippoCampus < DynamicAgent
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.
             x0 = [ initialPos; zeros(9,1) ];
-            f  = @(t, x, u) HippoCampus.odeFun(t, x, u);
-            fd = nonlinearDiscretization(f, dT, 'euler');
+            fd = nonlinearDiscretization(@HippoCampus.odeFun, dT, 'euler');
             dynamics = DiscreteNonlinearDynamics(fd, [], x0);
             
             % Create object with given parameters
@@ -127,8 +126,8 @@ classdef HippoCampus < DynamicAgent
             G = blkdiag(0,0,0, gravity * cos(theta) * sinc(phi), gravity * sinc(theta), 0);
             
             % Construct coriolis matrix, see Fossen 2011, Theorem 3.2
-            C = [  zeros(3)             -skew(M(1:3,:) * nu) ;
-                  -skew(M(1:3,:) * nu)  -skew(M(2:6,:) * nu) ];
+            C = [  zeros(3)                    -skew(M(1:3,1:3) * nu(1:3)) ;
+                  -skew(M(1:3,1:3) * nu(1:3))  -skew(M(4:6,4:6) * nu(4:6)) ];
             
             % Construct damping matrix
             D = -blkdiag(HippoCampus.Xu * abs(u), HippoCampus.Yv * abs(v),...
