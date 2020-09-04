@@ -52,7 +52,6 @@ leech = DataLeech(Agents, steps, 'position', 'dT_effective');
 
 % Initialize remaining values for the simulation
 t = 0;
-k = 0;
 
 % Save start time of the simulation. We want to periodically print the
 % progress of the simulation.
@@ -62,7 +61,6 @@ tic
 % profile on
 while t < Tf
     t = sim.step();
-    k = k + 1;
     
     % Save current position of all agents
     leech.save(t)

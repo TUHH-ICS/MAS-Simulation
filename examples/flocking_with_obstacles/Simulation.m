@@ -84,8 +84,7 @@ lap_history = zeros(floor(Tf/dT) + 1, agentCount, agentCount);
 
 % Initialize remaining values for the simulation
 t = 0;
-k = 0;
-k_lap = 1;
+k = 1;
 
 % Save start time of the simulation. We want to periodically print the
 % progress of the simulation.
@@ -95,15 +94,14 @@ tic
 % profile on
 while t < Tf
     t = sim.step();
-    k = k + 1;
     
     % Save current position of all agents
     leech.save(t);
 
     if ~isempty(sim.lastLaplacian)
-        lap_history(k_lap,:,:) = sim.lastLaplacian;
+        lap_history(k,:,:) = sim.lastLaplacian;
         sim.lastLaplacian = [];
-        k_lap = k_lap + 1;
+        k = k + 1;
     end
     
     % Print progress every 2 seconds
