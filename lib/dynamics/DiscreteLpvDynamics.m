@@ -90,11 +90,11 @@ classdef DiscreteLpvDynamics < DiscreteDynamics
             %   The returned valued is empty if no C and D functions are
             %   specified.
             
+            if ~xor(isempty(obj.rho_fun), nargin <= 2)
+                error('You must set either a rho_fun or give an external rho, not both!')
+            end
+            
             if ~isempty(obj.rho_fun)
-                if nargin >= 3
-                    error('You must set either a rho_fun or give an external rho, not both!')
-                end
-                
                 rho = obj.rho_fun(obj.k, obj.x, w);
             end
             

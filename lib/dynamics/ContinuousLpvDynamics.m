@@ -81,7 +81,7 @@ classdef ContinuousLpvDynamics < ContinuousDynamics
             end
         end
         
-        function z = step(obj, w)
+        function z = step(obj, w, rho)
             %STEP Method to execute a single time step of the dynamics.
             %   This function takes an input w and evaluates the state and
             %   output equations of the LPV system. Note that z contains
@@ -90,15 +90,25 @@ classdef ContinuousLpvDynamics < ContinuousDynamics
             %   The returned valued is empty if no C and D functions are
             %   specified.
 
+            if ~xor(isempty(obj.rho_fun), nargin <= 2)
+                error('You must set either a rho_fun or give an external rho, not both!')
+            end
+            
+            if ~isempty(obj.rho_fun)               
+                fun = @obj.rho_fun;
+            else
+                fun = @(t, x, w) rho;
+            end
+            
             if nargout >= 1
-                rho = obj.rho_fun(obj.t, obj.x, w);
-                z   = obj.C(rho) * obj.x + obj.D(rho) * w;
+                val = fun(obj.t, obj.x, w);
+                z   = obj.C(val) * obj.x + obj.D(val) * w;
             end
             
             % Solve ODE for one time step
-            fun   = @(t,y) obj.A(obj.rho_fun(t,y,w)) * y ...
-                         + obj.B(obj.rho_fun(t,y,w)) * w;
-            [~,y] = ode45(fun, obj.t + [0, obj.dT], obj.x);
+            odefun = @(t,y) obj.A(fun(t,y,w)) * y ...
+                          + obj.B(fun(t,y,w)) * w;
+            [~,y]  = ode45(odefun, obj.t + [0, obj.dT], obj.x);
             obj.x = y(end, :)';
             
             % Advance system time
