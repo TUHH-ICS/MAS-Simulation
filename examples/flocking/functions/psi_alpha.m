@@ -3,21 +3,16 @@
 %
 % Original Authors: Christian Hespe <christian.hespe@tuhh.de>
 
-function alpha = phi_alpha(z, ra, da, h)
+function q = psi_alpha(z, ra, da, h)
 %PHI_ALPHA Defines the virtual potential field needed for the flocking
 %protocol introduced in Olfati-Saber, 2006.
+%   There is analytic expression for the potential of the Olfati-Saber
+%   interaction field, only for the corresponding force.
+%
 %   This function is vectorized for multiple inputs
 
-%% Calculate phi
-a     = 5;
-b     = 5;
-
-c     = (a-b) / sqrt(4*a*b);
-off   = z + c - da;
-
-sigma = off ./ sqrt(1 + off.^2);
-phi   = 0.5 * ((a+b) * sigma + (a-b));
-
-%% Calculate phi alpha
-alpha = rho_h(z/ra, h) .* phi;
+q = zeros(size(z));
+for i = 1:length(q)
+    q(i) = integral(@(x) phi_alpha(x, ra, da, h), 0, z(i));
+end
 end

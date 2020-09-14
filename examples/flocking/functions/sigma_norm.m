@@ -8,8 +8,10 @@ function [y, gradient] = sigma_norm(z, epsilon)
 %differentiable at 0.
 %   This is not really a norm, as it violates the norm axioms. In addition
 %   to the norm, we also return its gradient.
+%
+%   This function is vectorized for multiple inputs
 
-normed   = sqrt(1 + epsilon * norm(z)^2);
+normed   = sqrt(1 + epsilon * vecnorm(z, 2, 1).^2);
 y        = (normed - 1) / epsilon;
-gradient = z / normed;
+gradient = z ./ normed;
 end
