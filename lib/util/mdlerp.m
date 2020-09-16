@@ -11,6 +11,11 @@ function lerp = mdlerp(mat, domain, rho)
 %   The behaviour is a generalization of bi- or trilinear interpolation to
 %   arbitrarily many dimension.
 
+persistent saturation;
+if isempty(saturation)
+    saturation = false;
+end
+
 np = length(rho);
 
 rhonorm = zeros(np, 1); % Stores normalized version of the parameters
@@ -26,8 +31,24 @@ for i = 1:np
     dom = domain{i};
     j = 1;
     while true
-        if j == length(dom)
-            error('%dth parameter is outside its domain. Value: %g, Domain: [%g, %g]', i, rho(i), dom(1), dom(end))
+        if j == length(dom)           
+            % Go into saturation
+            if rho(i) < dom (1)
+                rhonorm(i) = 0;
+                mats(i) = 1;
+            else
+                rhonorm(i) = 1;
+                mats(i) = j-1;
+            end
+            
+            % Warn on the first occurence. In this way, we know the
+            % simulation could be misleading.
+            if ~saturation
+                warning('A parameter went into saturation')
+                saturation = true;
+            end
+            
+            break
         end
 
         % Find matching interval for this parameter

@@ -13,15 +13,15 @@ clear
 rng(0);
 
 %% Run tracking simulation
-Tf = 200;
+Tf = 500;
 
-hippo = HippoCampusAgent(1, zeros(3,1));
+hippo = HippoCampusCL(1, 1, [0; 3; 0]);
 dT = hippo.dT;
 
-steps = ceil(Tf / dT);
+steps = floor(Tf / dT) + 1;
 
 % Preallocate storage for simulation results
-leech = DataLeech(hippo, steps, 'position', 'state', 'att_d', 'ref', 'f');
+leech = DataLeech(hippo, steps, 'position', 'state', 'ref');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -32,7 +32,7 @@ lastprint = posixtime(datetime('now'));
 
 tic
 % profile on
-while t < Tf
+while t <= Tf
     hippo.step();
     t = t + dT;
     
@@ -47,3 +47,11 @@ while t < Tf
 end
 % profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
+
+%% Plot results
+figure()
+plot(leech.t, leech.data.position)
+
+figure()
+pos = leech.data.position;
+plot3(pos(:,1), pos(:,2), pos(:,3))
