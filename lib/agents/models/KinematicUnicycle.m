@@ -24,6 +24,11 @@ classdef KinematicUnicycle < DynamicAgent
             %KINEMATICUNICYCLE Construct an instance of this class
             %   Sets up the correct unicycle dynamics and initializes the
             %   unicycle with the given position.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   d           Length of the handle
+            %   initialPos  Initial position of the agent
                         
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.

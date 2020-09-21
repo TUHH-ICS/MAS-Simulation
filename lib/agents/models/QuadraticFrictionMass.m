@@ -30,6 +30,13 @@ classdef QuadraticFrictionMass < DynamicAgent
             %QUADRATICFRICTIONMASS Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent with the correct initial position and velocity.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   m           Mass of the model
+            %   b           Coefficient of friction
+            %   initialPos  Initial position of the agent
+            %   initialVel  Initial velocity of the agent
             
             dim = length(initialPos);
             if dim ~= length(initialVel)

@@ -55,6 +55,10 @@ classdef HippoCampus < DynamicAgent
             %   Sets up the discrete-time system equations for the
             %   nonlinear HippoCampus model with the correct initial
             %   conditions.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   initialPos  Initial position of the agent
                         
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.

@@ -25,10 +25,19 @@ classdef LinearFrictionMass < DynamicAgent
     end
     
     methods
-        function obj = LinearFrictionMass(id, dT, m, b, initialPos, initialVel)
+        function obj = LinearFrictionMass(id, dT, m, b, initialPos, initialVel, method)
             %LINEARFRICTIONMASS Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent with the correct initial position and velocity.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   m           Mass of the model
+            %   b           Coefficient of friction
+            %   initialPos  Initial position of the agent
+            %   initialVel  Initial velocity of the agent
+            %   method      Method used for discretization, either 'zoh' or
+            %               'euler', default: 'zoh'
             
             dim = length(initialPos);
             if dim ~= length(initialVel)
@@ -40,7 +49,11 @@ classdef LinearFrictionMass < DynamicAgent
             % conditions.
             A = kron(eye(dim), [0 1; 0 -b/m]);
             B = kron(eye(dim), [0; 1/m]);
-            [Ad, Bd] = ltiDiscretization(A, B, dT);
+            
+            if nargin <= 6
+                method = 'zoh';
+            end
+            [Ad, Bd] = ltiDiscretization(A, B, dT, method);
               
             % Construct discrete-time state space model
             x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);

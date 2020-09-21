@@ -28,10 +28,18 @@ classdef LinearisedQuadrocopter < DynamicAgent
     end
     
     methods
-        function obj = LinearisedQuadrocopter(id, dT, m, initialPos, initialVel)
+        function obj = LinearisedQuadrocopter(id, dT, m, initialPos, initialVel, method)
             %LINEARISEDQUADROCOPTER Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent with the correct initial position.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   m           Mass of the quadrotor
+            %   initialPos  Initial position of the agent
+            %   initialVel  Initial velocity of the agent
+            %   method      Method used for discretization, either 'zoh' or
+            %               'euler', default: 'zoh'
                         
             % Define continuous-time state-space matrices
             g = LinearisedQuadrocopter.g;
@@ -59,7 +67,11 @@ classdef LinearisedQuadrocopter < DynamicAgent
                   0   0 1 0 ;
                   0   0 0 0 ;
                   0   0 0 1 ];
-            [Ad, Bd] = ltiDiscretization(A, B, dT);
+            
+            if nargin <= 5
+                method = 'zoh';
+            end
+            [Ad, Bd] = ltiDiscretization(A, B, dT, method);
               
             % Construct discrete-time state space model
             x0 = [ kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]); zeros(6,1) ];

@@ -18,10 +18,17 @@ classdef DoubleIntegratorAgent < DynamicAgent
     end
     
     methods
-        function obj = DoubleIntegratorAgent(id, dT, initialPos, initialVel)
+        function obj = DoubleIntegratorAgent(id, dT, initialPos, initialVel, method)
             %DOUBLEINTEGRATORAGENT Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent with the correct initial position and velocity.
+            %
+            %   id          Id of the agent in the network
+            %   dT          Desired sampling time
+            %   initialPos  Initial position of the agent
+            %   initialVel  Initial velocity of the agent
+            %   method      Method used for discretization, either 'zoh' or
+            %               'euler', default: 'zoh'
             
             dim = length(initialPos);
             if dim ~= length(initialVel)
@@ -33,7 +40,11 @@ classdef DoubleIntegratorAgent < DynamicAgent
             % conditions.
             A = kron(eye(dim), [0 1; 0 0]);
             B = kron(eye(dim), [0; 1]);
-            [Ad, Bd] = ltiDiscretization(A, B, dT);
+            
+            if nargin <= 4
+                method = 'zoh';
+            end
+            [Ad, Bd] = ltiDiscretization(A, B, dT, method);
               
             % Construct discrete-time state space model
             x0 = kron(initialPos, [1; 0]) + kron(initialVel, [0; 1]);
