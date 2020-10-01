@@ -26,9 +26,9 @@ classdef HippoCampus < DynamicAgent
         g     =  9.81    % [m/s^2]
         
         m     =  1.43    % [kg]
-        Ix    = -0.00241 % [kgm^2]
-        Iy    = -0.01072 % [kgm^2]
-        Iz    = -0.01072 % [kgm^2]
+        Ix    =  0.00241 % [kgm^2]
+        Iy    =  0.01072 % [kgm^2]
+        Iz    =  0.01072 % [kgm^2]
         Xudot = -1.11    % [kg]
         Yvdot = -2.80    % [kg]
         Zwdot = -2.80    % [kg]
