@@ -22,11 +22,11 @@ saveVideo = false;
 %% Network parameters
 agentCount = 50;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.14;  % Size of the simulation time steps [s]
+dT         = 0.11;  % Size of the simulation time steps [s]
 Tf         = 100;  % Simulation time [s]
 
 % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
-netType    = 1;
+netType    = 3;
 
 %% Initialize the network
 switch netType
@@ -43,8 +43,9 @@ switch netType
         config.slotCount        = agentCount;
         config.cycleTime        = dT;
         config.wirelessProtocol = WirelessProtocol.wp_802_11p;
-        config.power            = 500e-3;
-        config.packetSize       = 6*64;
+        config.power            = 3e-5;
+        config.pathLoss         = 2.5;
+        config.packetSize       = 4*64;
         enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
         Network = SinrNetwork(config, enableSubstepping);
 end
