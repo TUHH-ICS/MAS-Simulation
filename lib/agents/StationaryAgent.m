@@ -21,7 +21,7 @@ classdef StationaryAgent < BaseAgent
     end
     
     methods     
-        function obj = StationaryAgent(id, pos)
+        function obj = StationaryAgent(id, pos, dT)
             %STATIONARYAGENT Construct an instance of this class
             
             % In case the constructor is called without arguments, provide
@@ -33,8 +33,11 @@ classdef StationaryAgent < BaseAgent
             if nargin <= 1
                 pos = 0;
             end
+            if nargin <= 2
+                dT = NaN;
+            end
             
-            obj@BaseAgent(id, NaN);
+            obj@BaseAgent(id, dT);
             obj.x = pos;
         end
         
