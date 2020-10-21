@@ -174,6 +174,13 @@ classdef SinrNetwork < BaseNetwork
                     if obj.enableSubstepping
                         recvMessages = obj.recvMessages(:, 1);
                     end
+                else
+                    % In the case where no message was sent, the
+                    % recvMessages cell contains the wrong data type,
+                    % double instead of Message. This line corrects that,
+                    % so that consumers of the messages get the correctly
+                    % typed object.
+                    recvMessages(:) = {Message.empty};
                 end 
             else
                 % Return all messages that were received in this slot. When
