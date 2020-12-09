@@ -82,7 +82,7 @@ classdef MessageBuffer < handle
             %TAKEALL Returns all messages that are currently in the buffer
             %and removes them from the buffer afterwards.
             messages = obj.buffer(1:obj.nElements);
-            obj.nElements = 0;
+            obj.clear();
         end
         
         function clear(obj)
