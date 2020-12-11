@@ -112,7 +112,7 @@ double WirelessProtocolParameters::wavelength(){
 }
 
 double WirelessProtocolParameters::sinr_threshold(){
-	return std::pow(2.0, (m_bitrate/m_channelBandwidth)-1.0);
+	return std::pow(2.0, m_bitrate/m_channelBandwidth) - 1.0;
 }
 
 double WirelessProtocolParameters::get_far_field_distance(const double antennaDimension, const unsigned int k){
