@@ -15,13 +15,13 @@ rng(0);
 %% Run tracking simulation
 Tf = 500;
 
-hippo = HippoCampusCL(1, 1, [0; 3; 0]);
+hippo = HippoCampusAgent(1, [0; 0; 0]);
 dT = hippo.dT;
 
 steps = floor(Tf / dT) + 1;
 
 % Preallocate storage for simulation results
-leech = DataLeech(hippo, steps, 'position', 'state', 'ref');
+leech = DataLeech(hippo, steps, 'position', 'velocity', 'state', 'ref');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -51,7 +51,30 @@ fprintf("Simulation completed in %.3g seconds!\n", toc);
 %% Plot results
 figure()
 plot(leech.t, leech.data.position)
+xlabel('Time t')
+ylabel('Positions')
+legend('x(t)', 'y(t)', 'z(t)')
 
 figure()
 pos = leech.data.position;
+ref = leech.data.ref;
 plot3(pos(:,1), pos(:,2), pos(:,3))
+hold on
+plot3(ref(:,1), ref(:,2), ref(:,3))
+hold off
+xlabel('x(t) Coordinate')
+ylabel('y(t) Coordinate')
+zlabel('z(t) Coordinate')
+legend('HippoCampus', 'Reference')
+
+figure()
+subplot(211)
+plot(leech.t, leech.data.velocity)
+xlabel('Time t')
+ylabel('Inertial Frame Velocities')
+legend('v_x(t)', 'v_y(t)', 'v_z(t)')
+subplot(212)
+plot(leech.t, leech.data.state(:, 7:9))
+xlabel('Time t')
+ylabel('Body Frame Velocities')
+legend('v_x(t)', 'v_y(t)', 'v_z(t)')
