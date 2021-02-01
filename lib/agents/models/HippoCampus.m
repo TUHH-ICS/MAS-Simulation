@@ -82,10 +82,13 @@ classdef HippoCampus < DynamicAgent
         function value = get.velocity(obj)
             %GET.VELOCITY Implementation of the dependent velocity
             %property.
-            %   This function is simply a projection from the state space 
-            %   of the agents into the position space.
+            %   The linear velocity terms in the state vector of the model
+            %   are given in the body-fixed reference frame. In order for
+            %   the velocities of different agents to be comparable, this
+            %   velocity is transformed into the inertial frame first.
             
-            value = obj.state(7:9);
+            R     = body_frame_rotation(obj.state(4:6));
+            value = R * obj.state(7:9);
         end
     end
     
@@ -108,9 +111,7 @@ classdef HippoCampus < DynamicAgent
             nu  = x(7:12);
             
             % Construct rotational tensor
-            R = [  cos(psi)*cos(theta)  cos(psi)*sin(theta)*sin(phi)-sin(psi)*cos(phi)  cos(psi)*cos(phi)*sin(theta)+sin(psi)*sin(phi) ;
-                   sin(psi)*cos(theta)  sin(psi)*sin(theta)*sin(phi)+cos(psi)*cos(phi)  sin(psi)*cos(phi)*sin(theta)-cos(psi)*sin(phi) ;
-                  -sin(theta)           cos(theta)*sin(phi)                             cos(theta)*cos(phi)                            ];
+            R = body_frame_rotation(x(4:6));
             
             % Construct velocity transformation tensor
             T = [ 1  sin(phi)*tan(theta)   cos(phi)*tan(theta) ;
@@ -157,4 +158,16 @@ function S = skew(lambda)
     S = [  0          -lambda(3)   lambda(2) ;
            lambda(3)   0          -lambda(1) ;
           -lambda(2)   lambda(1)   0         ]; 
+end
+
+function R = body_frame_rotation(Phi)
+%BODY_FRAME_ROTATION Constructs the rotational matrix that transforms a
+%vector from the rotated body frame of the HippoCampus into the inertial
+%reference frame.
+
+    phi = Phi(1); theta = Phi(2); psi = Phi(3);
+
+    R = [  cos(psi)*cos(theta)  cos(psi)*sin(theta)*sin(phi)-sin(psi)*cos(phi)  cos(psi)*cos(phi)*sin(theta)+sin(psi)*sin(phi) ;
+           sin(psi)*cos(theta)  sin(psi)*sin(theta)*sin(phi)+cos(psi)*cos(phi)  sin(psi)*cos(phi)*sin(theta)-cos(psi)*sin(phi) ;
+          -sin(theta)           cos(theta)*sin(phi)                             cos(theta)*cos(phi)                            ];
 end
