@@ -127,7 +127,7 @@ classdef HippoCampus < DynamicAgent
               
             % Compute hydrostatic load
             gravity = HippoCampus.zg * HippoCampus.g * HippoCampus.m;
-            G = blkdiag(0,0,0, gravity * cos(theta) * sinc(phi), gravity * sinc(theta), 0);
+            G = [ 0; 0; 0; gravity * cos(theta) * sin(phi); gravity * sin(theta); 0 ];
             
             % Construct coriolis matrix, see Fossen 2011, Theorem 3.2
             C = [  zeros(3)                    -skew(M(1:3,1:3) * nu(1:3)) ;
@@ -141,9 +141,10 @@ classdef HippoCampus < DynamicAgent
             % Build state space equations
             tau  = [ in(1); 0; 0; in(2:4) ];
             Mi   = inv(M);
-            A    = [ zeros(6), J; -Mi*G, -Mi*(C+D) ];
+            A    = [ zeros(6), J; zeros(6), -Mi*(C+D) ];
             B    = [ zeros(6); Mi ];
-            xdot = A * x + B * tau;
+            H    = [ zeros(6,1); -Mi*G ];
+            xdot = A * x + B * tau + H;
         end
     end
 end
