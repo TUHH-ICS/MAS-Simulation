@@ -12,7 +12,7 @@ classdef HippoCampus < DynamicAgent
     %   A. Hackbarth; E. Kreuzer & E. Solowjow. "HippoCampus: A Micro
     %   Underwater Vehicle for Swarm Applications", 2015
     %
-    %   D.-A. Dücker; E. Kreuzer; G. Maerker & E. Solowjow. "Parameter
+    %   D.-A. Duecker; E. Kreuzer; G. Maerker & E. Solowjow. "Parameter
     %   Identification for Micro Underwater Vehicles", 2018
     %
     %   For an implementation of flocking behaviour with this model, see:
@@ -63,7 +63,7 @@ classdef HippoCampus < DynamicAgent
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.
             x0 = [ initialPos; zeros(9,1) ];
-            fd = nonlinearDiscretization(@HippoCampus.odeFun, dT, 'euler');
+            fd = nonlinearDiscretization(@HippoCampus.odeFun, dT, 'rk4');
             dynamics = DiscreteNonlinearDynamics(fd, [], x0);
             
             % Create object with given parameters
