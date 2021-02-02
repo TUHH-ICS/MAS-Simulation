@@ -10,8 +10,8 @@ classdef HippoCampusAgent < HippoCampus
     %   reference trajectory.
     
     properties(Constant)
-        K_p_att = blkdiag(  4, 4, 4);
-        K_d_att = blkdiag(1.5, 2, 2);
+        K_p_att = diag([4, 4, 4]);
+        K_d_att = diag([1.5, 2, 2]);
         
         K_p_pos = 2;
         K_d_pos = 2;

@@ -105,7 +105,7 @@ classdef HippoCampus < DynamicAgent
             %   in = [f, tau_phi, tau_theta, tau_psi]'
 
             % Extract states into more readable form
-            phi = x( 4); theta = x( 5); psi = x( 6);
+            phi = x( 4); theta = x( 5);
             u   = x( 7); v     = x( 8); w   = x( 9);
             p   = x(10); q     = x(11); r   = x(12);
             nu  = x(7:12);
@@ -117,13 +117,14 @@ classdef HippoCampus < DynamicAgent
             T = [ 1  sin(phi)*tan(theta)   cos(phi)*tan(theta) ;
                   0  cos(phi)             -sin(phi)            ;
                   0  sin(phi)/cos(theta)   cos(phi)/cos(theta) ];
-            J = blkdiag(R, T);
+            J = [ R         zeros(3) ;
+                  zeros(3)  T        ];
               
             % Calculate mass matrix
-            Ma  = -blkdiag(HippoCampus.Xudot, HippoCampus.Yvdot, HippoCampus.Zwdot,...
-                           HippoCampus.Kpdot, HippoCampus.Mqdot, HippoCampus.Nrdot);
-            Mrb =  blkdiag(eye(3) * HippoCampus.m, HippoCampus.Ix,...
-                           HippoCampus.Iy, HippoCampus.Iz);
+            Ma  = -diag([HippoCampus.Xudot, HippoCampus.Yvdot, HippoCampus.Zwdot,...
+                         HippoCampus.Kpdot, HippoCampus.Mqdot, HippoCampus.Nrdot]);
+            Mrb =  diag([HippoCampus.m,  HippoCampus.m,  HippoCampus.m,...
+                         HippoCampus.Ix, HippoCampus.Iy, HippoCampus.Iz]);
             M = Ma + Mrb;
               
             % Compute hydrostatic load
@@ -131,21 +132,21 @@ classdef HippoCampus < DynamicAgent
             G = [ 0; 0; 0; gravity * cos(theta) * sin(phi); gravity * sin(theta); 0 ];
             
             % Construct coriolis matrix, see Fossen 2011, Theorem 3.2
-            C = [  zeros(3)                    -skew(M(1:3,1:3) * nu(1:3)) ;
-                  -skew(M(1:3,1:3) * nu(1:3))  -skew(M(4:6,4:6) * nu(4:6)) ];
+            C12 = -skew(M(1:3,1:3) * nu(1:3));
+            C = [ zeros(3)   C12                        ;
+                  C12       -skew(M(4:6,4:6) * nu(4:6)) ];
             
             % Construct damping matrix
-            D = -blkdiag(HippoCampus.Xu * abs(u), HippoCampus.Yv * abs(v),...
-                         HippoCampus.Zw * abs(w), HippoCampus.Kp * abs(p),...
-                         HippoCampus.Mq * abs(q), HippoCampus.Nr * abs(r));
+            D = -diag([HippoCampus.Xu * abs(u), HippoCampus.Yv * abs(v),...
+                       HippoCampus.Zw * abs(w), HippoCampus.Kp * abs(p),...
+                       HippoCampus.Mq * abs(q), HippoCampus.Nr * abs(r)]);
               
             % Build state space equations
             tau  = [ in(1); 0; 0; in(2:4) ];
-            Mi   = inv(M);
-            A    = [ zeros(6), J; zeros(6), -Mi*(C+D) ];
-            B    = [ zeros(6); Mi ];
-            H    = [ zeros(6,1); -Mi*G ];
-            xdot = A * x + B * tau + H;
+            
+            xdot       = zeros(12,1);
+            xdot(1:6)  = J*nu;
+            xdot(7:12) = M \ (tau - (C+D)*nu - G);
         end
     end
 end
