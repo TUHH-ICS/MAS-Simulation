@@ -21,7 +21,7 @@ dT = hippo.dT;
 steps = floor(Tf / dT) + 1;
 
 % Preallocate storage for simulation results
-leech = DataLeech(hippo, steps, 'position', 'velocity', 'state', 'ref');
+leech = DataLeech(hippo, steps, 'position', 'velocity', 'state', 'ref', 'u');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -78,3 +78,9 @@ plot(leech.t, leech.data.state(:, 7:9))
 xlabel('Time t')
 ylabel('Body Frame Velocities')
 legend('v_x(t)', 'v_y(t)', 'v_z(t)')
+
+figure()
+plot(leech.t, leech.data.u)
+xlabel('Time t')
+ylabel('Control Inputs')
+legend('f', 'phi', 'theta', 'psi')
