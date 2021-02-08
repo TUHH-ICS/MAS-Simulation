@@ -36,7 +36,7 @@ classdef DynamicAgent < BaseAgent
         end
     end
     
-    methods(Sealed, Access = protected)
+    methods(Access = protected)
         function move(obj, u)
             %MOVE Calling this function once takes the agent forward in
             %time by one time step.

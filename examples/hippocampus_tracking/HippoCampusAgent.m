@@ -22,7 +22,7 @@ classdef HippoCampusAgent < HippoCampus
     end
     
     properties(GetAccess = private, SetAccess = private)
-        t           % Current time of the simulation
+        t % Current time of the simulation
     end
     
     methods
@@ -31,7 +31,7 @@ classdef HippoCampusAgent < HippoCampus
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
 
-            obj@HippoCampus(id, 0.005, initialPos);
+            obj@HippoCampus(id, 0.005, initialPos, false);
             
             % Initialize internal state of the simulation model
             obj.ref = zeros(3,1);
