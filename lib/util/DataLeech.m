@@ -52,8 +52,6 @@ classdef DataLeech < handle
             for field = varargin
                 name = field{:};
                 if any(strcmp(pubprobs, name))
-                    probe = [host.(name)];
-                    obj.data.(name) = zeros([steps, size(probe)]);
                     obj.targets = [obj.targets, field];
                 else
                     warning("The host does not have a property called '%s'. This variable will be ignored.", name)
@@ -66,6 +64,15 @@ classdef DataLeech < handle
             
             if obj.k > obj.steps
                 error('The target number of steps was exceeded')
+            end
+            
+            % Initialize all variables
+            if obj.k == 1
+                for field = obj.targets
+                    name = field{:};
+                    val  = [obj.host.(name)];
+                    obj.data.(name) = zeros([obj.steps, size(val(:))]);
+                end
             end
             
             % Save data for each desired property
