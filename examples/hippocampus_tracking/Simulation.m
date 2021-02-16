@@ -84,3 +84,13 @@ plot(leech.t, leech.data.u, '-', leech.t, leech.data.u_sat, '--')
 xlabel('Time t')
 ylabel('Control Inputs')
 legend('f', 'phi', 'theta', 'psi')
+
+%% Performance Evaluation
+% The measure chosen to evaluate the tracking performance of the
+% HippoCampus controller is the root-mean-square tracking error of the
+% given trajectory
+
+e   = leech.data.position - leech.data.ref; % Tracking error at each step
+ek  = sum(e.^2, 2);                         % Calculate ||e||_2^2
+rms = sqrt(sum(ek)/length(ek));             % Calculate RMS value
+fprintf("The RMS error is %.4g\n", rms);
