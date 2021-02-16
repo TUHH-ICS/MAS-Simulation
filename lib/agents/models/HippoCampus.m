@@ -41,6 +41,21 @@ classdef HippoCampus < DynamicAgent
         Kp    = -0.0028  % [kgm^2]
         Mq    = -0.0476  % [kgm^2]
         Nr    = -0.0476  % [kgm^2]
+        
+        h     = 0.0481   % [m] Distance of rotors to HippoCampus center
+        Cd    = 0.0024   % Coefficient of drag for the rotors
+        tlim  = 8.5      % Maximal torque of the motors
+    end
+    
+    properties(Constant, Access = private)
+        % These two constants are the transformation matrices from the body
+        % frame torques to the rotor torques and back. They are required to
+        % implement realistic saturation effects.
+        Q = [  1                1                1               1              ;
+              -HippoCampus.Cd   HippoCampus.Cd  -HippoCampus.Cd  HippoCampus.Cd ;
+              -HippoCampus.h   -HippoCampus.h    HippoCampus.h   HippoCampus.h  ;
+               HippoCampus.h   -HippoCampus.h   -HippoCampus.h   HippoCampus.h  ]
+        Qinv = inv(HippoCampus.Q)
     end
     
     properties(GetAccess = public, SetAccess = private)
@@ -127,7 +142,7 @@ classdef HippoCampus < DynamicAgent
                 obj.u_sat = u;
                 
                 if obj.saturation
-                    obj.move@DynamicAgent(saturate_controls(u));
+                    obj.move@DynamicAgent(HippoCampus.saturate_controls(u));
                 else
                     obj.move@DynamicAgent(u);
                 end
@@ -193,6 +208,29 @@ classdef HippoCampus < DynamicAgent
             xdot(1:6)  = J*nu;
             xdot(7:12) = M \ (tau - (C+D)*nu - G);
         end
+        
+        function u_sat = saturate_controls(u)
+            %SATURATE_CONTROLS Saturates the control signals to the limits
+            %specified in the HippoCampus model.
+            %   The control inputs for the model are given as the force in
+            %   x direction and torques around the center of gravity.
+            %   However, the saturation takes place in terms of the
+            %   controls of the four rotors. Therefore the control inputs
+            %   have to be first converted to the rotor signals, saturated
+            %   in that form, and then converted back.
+            
+            % Transform into rotor space
+            omega = HippoCampus.Qinv * u;
+            
+            % Calculate utilization of each rotor
+            util  = abs(omega/HippoCampus.tlim);
+            
+            % Saturate torque at max utilization
+            omega = omega ./ max(util, 1);    
+            
+            % Transform back into body frame
+            u_sat = HippoCampus.Q * omega;
+        end
     end
 end
 
@@ -216,19 +254,4 @@ function R = body_frame_rotation(Phi)
     R = [  cos(psi)*cos(theta)  cos(psi)*sin(theta)*sin(phi)-sin(psi)*cos(phi)  cos(psi)*cos(phi)*sin(theta)+sin(psi)*sin(phi) ;
            sin(psi)*cos(theta)  sin(psi)*sin(theta)*sin(phi)+cos(psi)*cos(phi)  sin(psi)*cos(phi)*sin(theta)-cos(psi)*sin(phi) ;
           -sin(theta)           cos(theta)*sin(phi)                             cos(theta)*cos(phi)                            ];
-end
-
-function u_sat = saturate_controls(u)
-    %SATURATE_CONTROLS Saturates the control signals to the limits
-    %specified in the HippoCampus model.
-    %   The control inputs for the model are given as the force in
-    %   x direction and torques around the center of gravity.
-    %   However, the saturation takes place in terms of the
-    %   controls of the four rotors. Therefore the control inputs
-    %   have to be first converted to the rotor signals, saturated
-    %   in that form, and then converted back.
-
-    % This is not the real saturation function, just a dummy for testing!
-    val = 2*max(0.5, norm(u));
-    u_sat = u / val;
 end
