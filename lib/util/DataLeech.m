@@ -71,7 +71,7 @@ classdef DataLeech < handle
                 for field = obj.targets
                     name = field{:};
                     val  = [obj.host.(name)];
-                    obj.data.(name) = zeros([obj.steps, size(val(:))]);
+                    obj.data.(name) = zeros([obj.steps, size(val)]);
                 end
             end
             
