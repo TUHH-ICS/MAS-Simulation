@@ -26,16 +26,15 @@ classdef OS_InteractionField
             % The interaction potential psi does not have a closed form solution and
             % needs to be computed by numerical integration. To avoid numerical
             % integration each time, this function stores the input output data for 
-            % interaction potential psi.  
+            % interaction potential psi.
+            
             dz=0.01;
-            z=0:dz:10;
-            for i=1:size(z,2)
-                vec(i)=psi_a(z(i), obj);
-            end
-            psi_a_data=struct;
-            psi_a_data.output=vec;
-            psi_a_data.input=0:dz:10;
-            obj.psi_a_data=psi_a_data;
+            
+            psi_a_data        = struct;
+            psi_a_data.output = psi_alpha(0:dz:10, obj.ra, obj.da, obj.h);
+            psi_a_data.input  = 0:dz:10;
+            
+            obj.psi_a_data = psi_a_data;
         end
         function [force,a]=get_interaction_force(obj,dist_euclidean)
             % This function takes in the Euclidean distance and outputs the

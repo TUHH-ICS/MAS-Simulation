@@ -4,7 +4,6 @@
 % Original Authors: Christian Hespe <christian.hespe@tuhh.de>
 
 addpath(genpath('../../lib'))
-addpath('functions')
 
 % Clear workspace to increase repeatability
 clear
