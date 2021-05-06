@@ -15,13 +15,13 @@ classdef FlockingVehicleAgent < DynamicAgent
         c_gradient      = 0.1;   % constant multiplying the gradient force
         c_hessian       = 0;   % constant multiplying the hessian damping
         c_interact      = 1e-2; % constant multiplying the interaction force
-        
     end
     
     properties(GetAccess = public, SetAccess = immutable)
-        dim          % dimension of the virtual particle(usually the same as that of the vehicle position)
+        dim          % dimension of the virtual particle
         Vehicle      % Model of the vehicle 
         arch         % Architecture: 1-> coupled(transmit vehicle pos and vel) OR 2 -> decoupled(transmit virtual pos and vel)
+        no_veh_steps % number of vehicle time-steps for every FlockingVehicleAgent time-step
     end
     
     % These properties have to be redefined from the superclass BaseAgent
@@ -30,6 +30,7 @@ classdef FlockingVehicleAgent < DynamicAgent
         position_vir % Current position of the virtual particle
         velocity % Current velocity of the agent
         velocity_vir % Current velocity of the virtual particle 
+        Vehicle_state % Current state vector of the vehicle												   
     end
     
     properties(GetAccess = private, SetAccess = private)
@@ -64,7 +65,7 @@ classdef FlockingVehicleAgent < DynamicAgent
                 error('Position and velocity vectors must have the same dimensions!')
             end
             
-			obj.conc_field    = conc_field;
+            obj.conc_field    = conc_field;
             obj.interac_field = interac_field;
             obj.field_sensor  = field_sensor;
             
@@ -74,8 +75,12 @@ classdef FlockingVehicleAgent < DynamicAgent
             obj.QuadModelEst.c_id  = 0;
             
             % Intialize the vehicle model
-            obj.Vehicle  = Vehicle;            
+            obj.Vehicle  = Vehicle;
             obj.arch=arch;
+            obj.no_veh_steps=obj.dT/obj.Vehicle.dT;
+            if obj.no_veh_steps~=floor(obj.no_veh_steps)
+                error('dT must be an integer multiple of %f',obj.Vehicle.dT)
+            end
         end
         
         function value = get.position(obj)
@@ -109,6 +114,13 @@ classdef FlockingVehicleAgent < DynamicAgent
             %   of the virtual particle into the velocity space.
             
             value = obj.state(2*(1:obj.dim));
+        end
+		function value = get.Vehicle_state(obj)
+            %GET.VEHICLE_STATE Implementation of the dependent
+            %VEHICLE_STATE property
+            %   This function returns the state vector of the Vehicle 
+            % object associated with the agent            
+            value = obj.Vehicle.state;
         end
         
         function [grad,hess] = get_gradient_hessian_est(obj,field_data)
@@ -179,7 +191,6 @@ classdef FlockingVehicleAgent < DynamicAgent
                     field_data_all.positions=[field_data_all.positions,data.field_data.positions];
                     field_data_all.values=[field_data_all.values,data.field_data.values];
                 end
-                
             end
             
             % Calculate force on the agent from the source field
@@ -193,8 +204,17 @@ classdef FlockingVehicleAgent < DynamicAgent
                                   
             % Set the position of the virtual particle as reference to
             % Vehicle
-            veh_ref=[obj.position_vir;0];
-            obj.Vehicle.step(veh_ref);
+            switch(length(obj.Vehicle.position))
+                case 1
+                    error('Dimensions of virtual particle and vehicle do not match')
+                case 2
+                    veh_ref=[obj.position_vir];
+                case 3
+                    veh_ref=[obj.position_vir;0];
+            end
+			for i=1:obj.no_veh_steps
+				obj.Vehicle.step(veh_ref);
+			end            
             
             % Send message to network, include position and velocity
             data = struct; 
@@ -202,8 +222,9 @@ classdef FlockingVehicleAgent < DynamicAgent
             data.field_data= field_data_self;
             obj.send(data)
         end
-        
-        function [pos,vel]=get_self_ref(obj)
+    end
+	methods(Access=private)
+		function [pos,vel]=get_self_ref(obj)
             %GET_SELF_REF
             %   This function returns the agent position based on the archtiecture
             % (Used later for computing forces and for transmitting to
@@ -217,6 +238,6 @@ classdef FlockingVehicleAgent < DynamicAgent
                     vel = obj.velocity_vir;
             end
         end
-    end
+	end
 end
 

@@ -17,20 +17,14 @@ classdef HippoCampusAgent < HippoCampus
         K_d_pos = 1;
     end
     
-    properties(GetAccess = private, SetAccess = private)
-        t % Current time of the simulation
-    end
-    
     methods
         function obj = HippoCampusAgent(id, initialPos)
             %HIPPOCMAPUSAGENT Construct an instance of this class
             %   Sets up the correct agent dynamics and initializes the
             %   agent and consensus protocol to the given initial position.
 
-            obj@HippoCampus(id, 0.005, initialPos, false);
+            obj@HippoCampus(id, 0.005, initialPos, false);            
             
-            % Initialize internal state of the simulation model            
-            obj.t   = 0;
         end
 
         function step(obj,ref)            
@@ -40,6 +34,8 @@ classdef HippoCampusAgent < HippoCampus
             % Implement linear thrust controller
             vel = -HippoCampusAgent.K_p_pos * norm(e);
             f   =  HippoCampusAgent.K_d_pos * (vel - obj.state(7));
+            % Note that the controller is designed to move them backwards.
+            % So, the velocities will most of the times be negative
             
             % Implement SO(3) attitude controller
             pitch = -atan2(e(3), norm(e(1:2)));
@@ -50,8 +46,7 @@ classdef HippoCampusAgent < HippoCampus
                                         obj.state([4:6, 10:12]), Phi);
             
             % Apply control inputs to the agent
-            obj.move([f; tau]);
-            obj.t = obj.t + obj.dT;
+            obj.move([f; tau]);            
         end
     end
 end
