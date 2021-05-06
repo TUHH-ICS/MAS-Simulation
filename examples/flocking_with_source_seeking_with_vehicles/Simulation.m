@@ -5,6 +5,7 @@
 %                   Christian Hespe <christian.hespe@tuhh.de>
 
 addpath(genpath('../../lib'))
+addpath('./Vehicles/')
 
 % Clear workspace to increase repeatability
 clc
@@ -17,14 +18,21 @@ profile clear
 % reproducible simulation, e. g. for profiling the code.
 rng(56);
 
+
+% Select Vehicle Model
+% 1-> Linearized Quadrocopter
+% 2-> Dynamic Unicycle
+% 3-> HippoCampus underwater vehicle
+veh=3;
+
 % Flag to enable exporting a video from the simulation results
-saveVideo = false;
+saveVideo = true;
 
 %% Network parameters
-agentCount = 25;   % Number of agents in the network
+agentCount = 5;   % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.005;  % Size of the simulation time steps [s]
-steps      = 50000;  % number of steps
+dT         = 0.01; % Size of the simulation time steps [s]
+steps      = 10000;  % number of steps
 Tf         = dT*steps; %Final Time
 %% Initialize the network
 
@@ -50,8 +58,8 @@ switch fieldType
         % Field Parameters
         no_centers=11;
         fcenter=50;
-        frange=100;
-        fvar=1e2;
+        frange=50;
+        fvar=1e1;
         fscale=50;
         conc_Field=InvGaussiansField(dimension,no_centers,fcenter,frange,fvar,fscale);
 end
@@ -91,14 +99,28 @@ end
 % 2-> decoupled(transmit virtual pos and vel) architecture
 arch=2; 
 % Set the friction between virtual particle and environment via c_fric and
-% mass of the virtual particle mass
+% mass of the virtual particle mass. 
 switch(arch)
+    % The coupled architecture (case 1), the outer loop needs to be considerably slower. 
+	% So set a high value for mass.
     case 1
-        c_fric = 1;   
-        mass = 40;  % The outer loop needs to be very slow-> large mass
+        switch(veh)
+            case 1 % Linearized quadrocopter
+                c_fric = 1; mass = 5;
+            case 2 % Dynamic unicycle
+                c_fric = 1; mass = 10;
+            case 3 % Hippocanmpus underwater robot
+                c_fric = 1; mass = 20;
+        end
     case 2
-        c_fric = 2;   
-        mass = 2;  
+        switch(veh)
+            case 1 % Linearized quadrocopter
+                c_fric = 1; mass = 1;
+            case 2 % Dynamic unicycle
+                c_fric = 0.2; mass = 0.7;
+            case 3 % Hippocanmpus underwater robot
+                c_fric = 2; mass = 2;
+        end
 end
 
 %% Initialize the agents
@@ -108,14 +130,19 @@ end
 Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
     % Randomly place the agents in the square [0,100]^2
-    pos = 50 + 30 * (rand(dimension, 1) - 0.5);
+    pos = 50 + 5 * (rand(dimension, 1) - 0.5);
     % Randomly assign the agent velocites in [-5,5]^2
-    vel = 0 * (rand(dimension, 1) - 0.5);
-    
-    id=Network.getId();
-    
-    % Initialize Vehicle model and architecture type    
-    Vehicle = HippoCampusAgent(id, [pos;0]); % concatinated pos with 0 for the z position    
+    vel = 0 * (rand(dimension, 1) - 0.5);    
+    id=Network.getId();    
+    % Initialize Vehicle model and architecture type 
+    switch(veh)
+	case 1
+	    Vehicle = LinearisedQuadrocopterAgent(id, [pos;0]); % concatinated pos with 0 for the z position
+	case 2
+	    Vehicle = DynamicUnicycleAgent(id, [pos]);
+	case 3
+	    Vehicle = HippoCampusAgent(id, [pos;0]); % concatinated pos with 0 for the z position
+    end        
     % Initiallize an agent with the generated initial conditions  
     Agents{i} = FlockingVehicleAgent(id, dT, pos, vel, conc_Field, interac_field,field_sensor,Vehicle,arch,mass,c_fric);
 end
@@ -128,7 +155,7 @@ Agents = [Agents{:}];
 lastprint = posixtime(datetime('now'));
 
 % Preallocate storage for simulation results
-leech = DataLeech(Agents, steps, 'position', 'velocity','position_vir', 'velocity_vir');
+leech = DataLeech(Agents, steps, 'position', 'velocity','position_vir', 'velocity_vir','Vehicle_state');
 
 % Initialize remaining values for the simulation
 t = 0;
@@ -178,8 +205,7 @@ for k = 1:steps
     if posixtime(datetime('now')) - lastprint >= 1
         lastprint = posixtime(datetime('now'));
         fprintf('Simulation %3.5g%% finished\n', 100*t/Tf)
-    end
-    
+    end    
 end
 % profile viewer
 toc
@@ -192,7 +218,7 @@ post_process(dT,steps,Energy)
 % Therefore, we need to resample the data. The resampling is oriented on
 % the set parameters of the video, that may be produced
 
-TVideo = 5; % Desired duration of the video [s]
+TVideo = 15; % Desired duration of the video [s]
 FPS    = 30; % Framerate of the video [Hz]
 
 % Calculate the required sampling time to meet the expectations
@@ -230,7 +256,29 @@ for k = 1:length(t_sampled)
     hold on
     pos = squeeze(sampled.position(k,:,:));
     pos_vir = squeeze(sampled.position_vir(k,:,:));
+	if veh==2 || veh==3
+        switch(veh)
+            case 2
+                phi = squeeze(sampled.Vehicle_state(k,4,:))';  
+            case 3
+                phi = squeeze(sampled.Vehicle_state(k,6,:))';  
+        end		  
+	cycledir = [cos(phi); sin(phi)];
     
+    switch(veh)
+        case 2% Unicycle controller design uses handle with d=0.2
+            cg=pos - 0.2 * cycledir;
+            front = cg + 0.25 * cycledir;
+            back  = cg - 0.25 * cycledir;
+        case 3% Hippocampus controller design doesn't use a handle d=0
+            % Note that the controller is designed to move them backwards.
+            % So, the velocities will most of the times be negative
+            front = pos +  0.2 * cycledir;
+            back  = pos -  0.1 * cycledir;
+    end
+			
+	line([front(1,:); back(1,:)], [front(2,:); back(2,:)], 'Color', 'k', 'LineWidth', 2)
+    end
     scatter(pos(1,:), pos(2,:))
     scatter(pos_vir(1,:), pos_vir(2,:),'*')
     hold off
