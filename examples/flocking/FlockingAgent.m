@@ -35,7 +35,7 @@ classdef FlockingAgent < DoubleIntegratorAgent
             messages = obj.receive();
             
             % Implement the flocking protocol
-            u = zeros(2, 1);
+            u = zeros(obj.dim, 1);
             for message = messages
                 % Compute sigma distance between the two agents
                 [dist, grad] = sigma_norm(message.data.position - obj.position,...

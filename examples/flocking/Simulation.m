@@ -16,16 +16,16 @@ profile clear
 rng(0);
 
 % Flag to enable exporting a video from the simulation results
-saveVideo = false;
+saveVideo = true;
 
 %% Network parameters
-agentCount = 50;   % Number of agents in the network
-dimension  = 2;    % Dimension of the space the agents move in
-dT         = 0.11;  % Size of the simulation time steps [s]
-Tf         = 100;  % Simulation time [s]
+agentCount = 200;   % Number of agents in the network
+dimension  = 3;    % Dimension of the space the agents move in
+dT         = 0.05;  % Size of the simulation time steps [s]
+Tf         = 120;  % Simulation time [s]
 
 % Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
-netType    = 3;
+netType    = 1;
 
 %% Initialize the network
 switch netType
@@ -61,7 +61,7 @@ for i = 1:length(Agents)
     % Point the agents to the center of the square at the start. In this
     % way, the agents will not fragment into multiple groups. This is not
     % required if a gamma agent would be included
-    vel = 0.01 * ([ 50; 50 ] - pos);
+    vel = 0.01 * (50*ones(dimension, 1) - pos);
     
     % Initiallize an agent with the generated initial conditions
     Agents{i} = FlockingAgent(Network.getId(), dT, pos, vel);
@@ -123,6 +123,7 @@ figure()
 % Compute boundary
 x_pos  = squeeze(leech.data.position(:,1,:));
 y_pos  = squeeze(leech.data.position(:,2,:));
+z_pos  = squeeze(leech.data.position(:,3,:));
 bounds = @(x) [min(min(x)), max(max(x))];
 
 % Open video file with mp4 encoding
@@ -136,13 +137,15 @@ end
 
 for k = 1:length(t_sampled)
     pos = squeeze(sampled.position(k,:,:));
-    scatter(pos(1,:), pos(2,:))
+    scatter3(pos(1,:), pos(2,:), pos(3,:))
     
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))
+    zlim(bounds(z_pos))
     title('Movement of the Agents')
     xlabel('Coordinate x(t)')
     ylabel('Coordinate y(t)')
+    ylabel('Coordinate z(t)')
     drawnow limitrate
     
     if ~isempty(video)
