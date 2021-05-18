@@ -16,15 +16,15 @@ profile clear
 rng(0);
 
 % Flag to enable exporting a video from the simulation results
-saveVideo = true;
+saveVideo = false;
 
 %% Network parameters
-agentCount = 200;   % Number of agents in the network
+agentCount = 200;  % Number of agents in the network
 dimension  = 3;    % Dimension of the space the agents move in
-dT         = 0.05;  % Size of the simulation time steps [s]
+dT         = 0.05; % Size of the simulation time steps [s]
 Tf         = 120;  % Simulation time [s]
 
-% Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
+% Type of communication, 1->ideal, 2->Bernoulli, 3->Markov, 4->SINR
 netType    = 1;
 
 %% Initialize the network
@@ -34,9 +34,18 @@ switch netType
         Network = IdealNetwork(agentCount, dT, dimension, range);
     case 2
         range     = 10;    % Range of the radio communication
-        pTransmit = 0.95; % Probability of successful transmission
-        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
+        pTransmit = 0.95;  % Probability of successful transmission
+        symmetric = false; % Symmetric packet loss or not
+        Network   = BernoulliNetwork(agentCount, dT, dimension, range,...
+                                     pTransmit, symmetric);
     case 3
+        range     = 10;    % Range of the radio communication
+        pFail     = 0.1;   % Probability of a good channel failing
+        pRecover  = 0.5;   % Probability of a failed channel recovering
+        symmetric = false; % Symmetric packet loss or not
+        Network   = MarkovNetwork(agentCount, dT, dimension, range,...
+                                  pFail, pRecover, [], symmetric);
+    case 4
         config                  = SinrConfiguration();
         config.agentCount       = agentCount;
         config.slotCount        = agentCount;
