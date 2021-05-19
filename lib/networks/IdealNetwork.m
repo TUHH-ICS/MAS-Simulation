@@ -21,9 +21,10 @@ classdef IdealNetwork < MatlabNetwork
             %IDEALNETWORK Construct an instance of this class
             %   The network needs several parameter to be correctly
             %   initialized.
-            %   agentCounter is the number of agents in the network
-            %   dim is the dimension of the space the agents move in
-            %   range is the communication range
+            %
+            %   agentCount    Number of agents in the network
+            %   dim           Dimension of the underlying space
+            %   range         Communication range
             
             % Initialize MatlabNetwork properties
             obj@MatlabNetwork(agentCount, cycleTime, dim);

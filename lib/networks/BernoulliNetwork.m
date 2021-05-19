@@ -5,31 +5,42 @@
 
 classdef BernoulliNetwork < MatlabNetwork
     %BERNOULLINETWORK Network implementation that models paket loss using a
-    %simple bernoulli distribution.
+    %simple Bernoulli distribution.
     %   The network has a fixed and uniform transmission probability p,
     %   that controls with which probability a message is receive if the
     %   recipient is in the transmission range.
     
     properties(GetAccess = public, SetAccess = immutable)
-        range % Range of the communication
-        p     % Probability of a successful transmission
+        range     % Range of the communication
+        p         % Probability of a successful transmission
+        symmetric % If true, only symmetric packet loss is considered, i.e.
+                  % if one direction fails, the other does as well.
     end
     
     methods
-        function obj = BernoulliNetwork(agentCount, cycleTime, dim, range, p)
+        function obj = BernoulliNetwork(agentCount, cycleTime, dim, range, p, symmetric)
             %BERNOULLINETWORK Construct an instance of this class
             %   The network needs several parameter to be correctly
             %   initialized.
-            %   agentCounter is the number of agents in the network
-            %   dim is the dimension of the space the agents move in
-            %   range is the communication range
-            %   p is the probability of a successful transmission
+            %
+            %   agentCount    Number of agents in the network
+            %   dim           Dimension of the underlying space
+            %   range         Communication range
+            %   p             Probability of a successful transmission
+            %   symmetric     Symmetric packet loss, default: false
             
             % Initialize MatlabNetwork properties
             obj@MatlabNetwork(agentCount, cycleTime, dim);
             
             obj.range = range;
             obj.p     = p;
+            
+            % Default to asymmetric channels
+            if nargin >= 6
+                obj.symmetric = symmetric;
+            else
+                obj.symmetric = false;
+            end
         end
         
         function recvMessages = process(obj) 
@@ -56,7 +67,15 @@ classdef BernoulliNetwork < MatlabNetwork
             end
             
             % Drop messages randomly -> Bernoulli distribution
-            filter = filter & (rand(size(filter)) <= obj.p);
+            probs = rand(obj.agentCount);
+            if obj.symmetric
+                % Make random matrix symmetric for symmetric packet loss
+                probs = triu(probs) + triu(probs, 1)';
+            end
+            
+            % Extract rows that correspond to the sender of each message
+            probs = probs([sentMessages.sender], :);
+            filter = filter & (probs < obj.p);
             
             % Copy all received messages in the receiving buffers
             recvMessages = cell(obj.agentCount,1);
