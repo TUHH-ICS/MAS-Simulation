@@ -16,11 +16,13 @@ classdef MarkovNetwork < MatlabNetwork
         p_fail    % Probability that a good channels fails
         p_recover % Probability that a failed channel recovers
         symmetric % If true, only symmetric packet loss is considered, i.e.
-                  % if one direction fails, the other does as well. 
+                  % if one direction fails, the other does as well.
     end
     
     properties(GetAccess = public, SetAccess = private)
-        state     % State of the Markov chain
+        state     % State of the Markov chain. This is a boolean variable,
+                  % not a probability distribution, as we are considering
+                  % only a single realization of the Markov chain here.
     end
     
     methods

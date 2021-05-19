@@ -6,9 +6,9 @@ The base of this simulation tool are the [`BaseAgent`](lib/agents/BaseAgent.m) a
 These abstract classes specify the interface that is used to drive the simulation but cannot be used for simulation themselves.
 To perform a simulation, you must define a set of classes that inherit from [`BaseAgent`](lib/agents/BaseAgent.m) and [`BaseNetwork`](lib/networks/BaseNetwork.m).
 
-Currently the project contains three such implementations, [`IdealNetwork`](lib/networks/IdealNetwork.m), [`BernoulliNetwork`](lib/networks/BernoulliNetwork.m) and [`SinrNetwork`](lib/networks/sinr/SinrNetwork.m).
-The first implements an ideal network without paket loss but a finite transmission range, the second additionally models paket loss using a Bernoulli distribution and the third models the communication channel with the SINR model.
-For further information on the third, see [Using the SINR Networking Library](#using-the-sinr-networking-library).
+Currently the project contains four such implementations, [`IdealNetwork`](lib/networks/IdealNetwork.m), [`BernoulliNetwork`](lib/networks/BernoulliNetwork.m), [`MarkovNetwork`](lib/networks/MarkovNetwork.m) and [`SinrNetwork`](lib/networks/sinr/SinrNetwork.m).
+The first implements an ideal network without paket loss but a finite transmission range, the second additionally models paket loss using a Bernoulli distribution, the third adds a 2-state Markov model for each transmission channel and the last models the communication channel with the SINR model.
+For further information on the fourth, see [Using the SINR Networking Library](#using-the-sinr-networking-library).
 
 For a high simulation speed, it is important to select the transmission range appropriatly, as interactions between agents should be minimized.
 Selecting the range to large can drastically decrease the simulation performance by introducing quadratic scaling in the number of agents.
@@ -39,7 +39,7 @@ There a three main steps to implementing a simulation within this project.
 In the [`examples/`](examples) folder, you find several example simulations build with this library.
 There are currently the following examples
 
-* [Flocking](examples/flocking): Implements a flocking simulation with double integrator agents in 2D space.
+* [Flocking](examples/flocking): Implements a flocking simulation with double integrator agents in 3D space.
 * [Source Seeking](examples/flocking_with_source_seeking): Extension of the previous example with a source seeking group objective.
 * [Obstacle Avoidance](examples/flocking_with_obstacles): Extension of the flocking simulation with obstacles that need to be avoided.
 * [Quadrocopter Formation](lti_formation_control): Formation control for linearized quadrotor models in 3D space.
