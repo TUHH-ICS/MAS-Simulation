@@ -27,6 +27,9 @@ classdef BernoulliNetwork < MatlabNetwork
             %   dim           Dimension of the underlying space
             %   range         Communication range
             %   p             Probability of a successful transmission
+            %                 Can either be a scalar for uniform loss
+            %                 probability across links, or a NxN matrix
+            %                 with N being the agentCount
             %   symmetric     Symmetric packet loss, default: false
             
             % Initialize MatlabNetwork properties
@@ -34,12 +37,23 @@ classdef BernoulliNetwork < MatlabNetwork
             
             obj.range = range;
             obj.p     = p;
-            
+                        
             % Default to asymmetric channels
             if nargin >= 6
                 obj.symmetric = symmetric;
             else
                 obj.symmetric = false;
+            end
+            
+            % Check compatability of p
+            if ~isscalar(p)
+                if dim(p) == 2 && all(size(p) == agentCount)
+                    if obj.symmetric && ~issymmetric(p)
+                        error('p needs to be symmetric for symmetric loss')
+                    end
+                else
+                    error('p must either be scalar or NxN')
+                end
             end
         end
         

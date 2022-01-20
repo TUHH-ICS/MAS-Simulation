@@ -64,7 +64,7 @@ classdef MarkovNetwork < MatlabNetwork
                 end
                 
                 % Check symmetry
-                if obj.symmetric && any(xor(init, init'), 'all')
+                if obj.symmetric && ~issymmetric(init)
                     error('init must be symmetric')
                 end
                 
