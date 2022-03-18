@@ -224,7 +224,6 @@ public:
                 
                 vec3 setVec = {0.0, 0.0, 0.0};
 
-                // [ds]: Is this actually intended?! 
                 switch(dims[0]){
                     case 3:
                         setVec.x3 = position[2];
