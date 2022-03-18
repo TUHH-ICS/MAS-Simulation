@@ -8,43 +8,16 @@ addpath(genpath('../../lib'))
 % Clear workspace to increase repeatability
 clear
 
-% Seed the pseudo random number generator. This is required if we want
-% reproducible simulation, e. g. for profiling the code.
-rng(0);
-
-% Flag to enable exporting a video from the simulation results
-saveVideo = false;
-
 %% Network parameters
 agentCount = 20;   % Number of agents in the network
 neighbours = 3;    % Number of neighbours for each agent
 dimension  = 2;    % Dimension of the space the agents move in
 dT         = 1e-2; % Size of the simulation time steps [s]
-Tf         = 3;  % Simulation time [s]
-
-% Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
-netType    = 1;
+Tf         = 3;    % Simulation time [s]
 
 %% Initialize the network
-switch netType
-    case 1
-        range   = Inf;   % Range of the radio communication
-        Network = IdealNetwork(agentCount, dT, dimension, range);
-    case 2
-        range     = Inf; % Range of the radio communication
-        pTransmit = 0.1; % Probability of successful transmission
-        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
-    case 3
-        config                  = SinrConfiguration();
-        config.agentCount       = agentCount;
-        config.slotCount        = agentCount;
-        config.cycleTime        = dT;
-        config.wirelessProtocol = WirelessProtocol.wp_802_11p;
-        config.power            = 500e-3;
-        config.packetSize       = 3*64;
-        enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
-        Network = SinrNetwork(config, enableSubstepping);
-end
+range   = Inf;   % Range of the radio communication
+Network = IdealNetwork(agentCount, dT, dimension, range);
 
 %% Initialize the agents
 % To avoid Matlab initializing the array of agents without including the
@@ -79,43 +52,21 @@ steps = sim.estimateSteps(Tf);
 % Preallocate storage for simulation results
 leech = DataLeech(Agents, steps, 'position');
 
-% Initialize remaining values for the simulation
-t = 0;
-
-% Save start time of the simulation. We want to periodically print the
-% progress of the simulation.
-lastprint = posixtime(datetime('now'));
-
+% Simulate!
 tic
-% profile on
+t = 0;
 while t < Tf
     t = sim.step();
     
     % Save current position of all agents
     leech.save(t)
-
-    % Print progress every 2 seconds
-    if posixtime(datetime('now')) - lastprint >= 1
-        lastprint = posixtime(datetime('now'));
-        fprintf('Simulation %3.5g%% finished\n', 100*t/Tf)
-    end
 end
-% profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
-%% Resample data for plotting
 % Due to the multi-rate support, the sampling will not always be uniform.
-% Therefore, we need to resample the data. The resampling is oriented on
-% the set parameters of the video, that may be produced
-
-TVideo = 10; % Desired duration of the video [s]
-FPS    = 30; % Framerate of the video [Hz]
-
-% Calculate the required sampling time to meet the expectations
-dTAnimate = Tf / (TVideo * FPS);
-
-% Resample the data. The function uses a ZOH resampling approach 
-[t_sampled, sampled] = leech.resample(dTAnimate);
+% Therefore, we need to resample the data. The function uses a ZOH
+% resampling approach. The resulting figure will be drawn with 20 FPS 
+[t_sampled, sampled] = leech.resample(1/20);
 
 %% Animate simulation results
 figure()
@@ -124,15 +75,6 @@ figure()
 x_pos  = squeeze(leech.data.position(:,1,:));
 y_pos  = squeeze(leech.data.position(:,2,:));
 bounds = @(x) [min(min(x)), max(max(x))];
-
-% Open video file with mp4 encoding
-if saveVideo
-    video = VideoWriter('formation', 'MPEG-4');
-    video.FrameRate = FPS;
-    open(video)
-else
-    video = [];
-end
 
 for k = 1:length(t_sampled)
     pos   = squeeze(sampled.position(k,:,:));
@@ -143,17 +85,6 @@ for k = 1:length(t_sampled)
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))
     drawnow limitrate
-    
-    if ~isempty(video)
-        % Save figure as video frame
-        frame = getframe(gcf);
-        writeVideo(video, frame);
-    end
-end
-
-if ~isempty(video)
-    close(video)
-    video = [];
 end
 
 t_bounds = bounds(leech.t);

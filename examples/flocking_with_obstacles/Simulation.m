@@ -8,48 +8,22 @@ addpath(genpath('../../lib'))
 % Clear workspace to increase repeatability
 clear
 
-% Reset the Matlab profiler
-profile clear
-
-% Seed the pseudo random number generator. This is required if we want
-% reproducible simulation, e. g. for profiling the code.
-rng(0);
-
-% Flag to enable exporting a video from the simulation results
-saveVideo = false;
-
 %% Network parameters
 agentCount = 50;  % Number of agents in the network
 dimension  = 2;    % Dimension of the space the agents move in
 dT         = 0.2; % Size of the simulation time steps [s]
 Tf         = 50;   % Simulation time [s]
 
-% Type of communication, 1->ideal, 2->Bernoulli, 3->SINR
-netType    = 3;
-
 %% Initialize the network
-switch netType
-    case 1
-        range   = 10;     % Range of the radio communication
-        Network = IdealNetwork(agentCount, dT, dimension, range);
-    case 2
-        range     = Inf;   % Range of the radio communication
-        pTransmit = 0.5;  % Probability of successful transmission
-        Network   = BernoulliNetwork(agentCount, dT, dimension, range, pTransmit);
-    case 3
-        config                  = SinrConfiguration();
-        config.agentCount       = agentCount;
-        config.slotCount        = 4;
-        config.cycleTime        = dT;
-        config.wirelessProtocol = WirelessProtocol.underwater_mako_modem;
-        config.power            = 5e-2;
-        config.packetSize       = 4*16;
-        config.pathLoss         = 2.3;
-        enableSubstepping       = false; % If true, the messages will be distributed among the agents according to the slot timing
-        Network = SinrNetwork(config, enableSubstepping);
-        
-        fprintf('The datarate of the network is %d bits/s\n', config.packetSize / config.slotTime);
-end
+config                  = SinrConfiguration();
+config.agentCount       = agentCount;
+config.slotCount        = 4;
+config.cycleTime        = dT;
+config.wirelessProtocol = WirelessProtocol.underwater_mako_modem;
+config.power            = 5e-2;
+config.packetSize       = 4*16;
+config.pathLoss         = 2.3;
+Network = SinrNetwork(config);
 
 %% Place obstacles
 obstacles = struct('center', {[75; 10], [75; 50]}, 'radius', {10, 10});
@@ -60,7 +34,7 @@ obstacles = struct('center', {[75; 10], [75; 50]}, 'radius', {10, 10});
 % and later convert this to a standard Matlab array.
 Agents = cell(agentCount, 1);
 for i = 1:length(Agents)
-    % Randomly place the agents in the square [0, 120]^2
+    % Randomly place the agents in the square [0, 50]^2
     pos = 25 + 50 * (rand(dimension, 1) - 0.5);
     vel = zeros(dimension, 1);
     
@@ -85,12 +59,7 @@ lap_history = zeros(floor(Tf/dT) + 1, agentCount, agentCount);
 t = 0;
 k = 1;
 
-% Save start time of the simulation. We want to periodically print the
-% progress of the simulation.
-lastprint = posixtime(datetime('now'));
-
 tic
-% profile on
 while t < Tf
     t = sim.step();
     
@@ -99,36 +68,19 @@ while t < Tf
 
     if ~isempty(sim.lastLaplacian)
         lap_history(k,:,:) = sim.lastLaplacian;
-        sim.lastLaplacian = [];
+        sim.lastLaplacian  = [];
         k = k + 1;
     end
-    
-    % Print progress every 2 seconds
-    if posixtime(datetime('now')) - lastprint >= 1
-        lastprint = posixtime(datetime('now'));
-        fprintf('Simulation %3.5g%% finished\n', 100*t/Tf)
-    end
 end
-% profile viewer
 fprintf("Simulation completed in %.3g seconds!\n", toc);
 
 [~, ~, distinctCollisions] = checkCollisions(leech.data.position, 0.5);
 fprintf("%d distinct collisions occurred!\n", distinctCollisions);
 
-%% Resample data for plotting
 % Due to the multi-rate support, the sampling will not always be uniform.
-% Therefore, we need to resample the data. The resampling is oriented on
-% the set parameters of the video, that may be produced
-
-TVideo = 20; % Desired duration of the video [s]
-FPS    = 30; % Framerate of the video [Hz]
-
-% Calculate the required sampling time to meet the expectations
-dTAnimate = Tf / (TVideo * FPS);
-
-% Calculate the required sampling time to meet the expectations
-dTAnimate = Tf / (TVideo * FPS);
-[t_sampled, sampled] = leech.resample(dTAnimate);
+% Therefore, we need to resample the data. The function uses a ZOH
+% resampling approach. The resulting figure will be drawn with 20 FPS 
+[t_sampled, sampled] = leech.resample(1/10);
 
 %% Animate simulation results
 
@@ -139,15 +91,6 @@ bounds = @(x) [min(min(x)), max(max(x))];
 
 % Compute resampled collisions
 [filter, collisionCount] = checkCollisions(sampled.position, 0.5);
-
-% Open video file with mp4 encoding
-if saveVideo
-    video = VideoWriter('obstacles', 'MPEG-4');
-    video.FrameRate = FPS;
-    open(video)
-else
-    video = [];
-end
 
 figure()
 for k = 1:length(t_sampled)
@@ -171,22 +114,10 @@ for k = 1:length(t_sampled)
     xlim(bounds(x_pos))
     ylim(bounds(y_pos))
     drawnow limitrate
-    
-    if ~isempty(video)
-        % Save figure as video frame
-        frame = getframe(gcf);
-        writeVideo(video, frame);
-    end
 end
-
-if ~isempty(video)
-    close(video)
-    video = [];
-end
-
-meanL = movmean(lap_history, 10, 1);
 
 figure()
+meanL = movmean(lap_history, 10, 1);
 for i = 1:size(meanL, 1)
     imshow(-squeeze(meanL(i,:,:)), 'InitialMagnification', 'fit')
     drawnow limitrate
