@@ -44,7 +44,7 @@ classdef HippoCampus < DynamicAgent
         
         h     = 0.0481   % [m] Distance of rotors to HippoCampus center
         Cd    = 0.0024   % Coefficient of drag for the rotors
-        tlim  = 8.5      % Maximal torque of the motors
+        tlim  = 2.35      % Maximal torque of the motors
     end
     
     properties(Constant, Access = private)
