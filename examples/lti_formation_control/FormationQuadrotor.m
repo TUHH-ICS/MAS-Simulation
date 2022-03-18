@@ -1,7 +1,8 @@
-% This file is part of a library for simulation of multi-agent systems
-% developed at the Institute of Control Systems at TUHH.
-%
-% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+%---------------------------------------------------------------------------------------------------
+% Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved.
+% Licensed under the GPLv3. See LICENSE in the project root for license information.
+% Author(s): Christian Hespe
+%---------------------------------------------------------------------------------------------------
 
 classdef FormationQuadrotor < LinearisedQuadrocopter
     %FORMATIONQUADROTOR Quadrotor agent that performs a formation control
@@ -66,4 +67,3 @@ classdef FormationQuadrotor < LinearisedQuadrocopter
         end
     end
 end
-

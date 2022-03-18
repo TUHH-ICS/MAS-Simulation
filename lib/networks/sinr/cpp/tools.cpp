@@ -1,16 +1,13 @@
+/* -------------------------------------------------------------------------------------------------
+ * Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved
+ * Licensed under the GPLv3. See LICENSE in the project root for license information.
+ * Author(s): Daniel Schneider
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #include "tools.h"
 #include <iostream>
 #include <assert.h>
-
- /* *****************************************************
- *  tools.cpp
- *  Author: Daniel Schneider [ds] (schneiderd@uni-koblenz.de)
- *  Date: 2020-01-20
- *
- *  Comments:
- *
- *  *****************************************************
-*/
  
 namespace TLS{
 

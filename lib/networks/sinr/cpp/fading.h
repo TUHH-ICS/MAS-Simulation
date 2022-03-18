@@ -1,3 +1,10 @@
+/* -------------------------------------------------------------------------------------------------
+ * Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved
+ * Licensed under the GPLv3. See LICENSE in the project root for license information.
+ * Author(s): Daniel Schneider
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #pragma once
 
 #include <vector>
@@ -5,16 +12,6 @@
 #include <string>
 #include <random>
 #include "tools.h"
-
- /* *****************************************************
- *  fading.h
- *  Author: Daniel Schneider [ds] (schneiderd@uni-koblenz.de)
- *  Date: 2020-06-09
- *
- *  Comments:
- *
- *  *****************************************************
-*/                
 
 struct _object;
 typedef _object PyObject;

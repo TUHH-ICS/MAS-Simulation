@@ -1,17 +1,15 @@
+/* -------------------------------------------------------------------------------------------------
+ * Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved
+ * Licensed under the GPLv3. See LICENSE in the project root for license information.
+ * Author(s): Daniel Schneider
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #pragma once
 #include <vector>
 #include <cmath>
 #include <assert.h>
 #include <tuple>
-
- /* *****************************************************
- *  tools.h
- *  Author: Daniel Schneider [ds] (schneiderd@uni-koblenz.de)
- *
- *  Comments:
- *
- *  *****************************************************
-*/
 
 namespace TLS{
 // Modern C++ Design, A. Alexandrescu, p. 25

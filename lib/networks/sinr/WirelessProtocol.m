@@ -1,7 +1,8 @@
-% This file is part of a library for simulation of multi-agent systems
-% developed at the Institute of Control Systems at TUHH.
-%
-% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+%---------------------------------------------------------------------------------------------------
+% Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved.
+% Licensed under the GPLv3. See LICENSE in the project root for license information.
+% Author(s): Christian Hespe
+%---------------------------------------------------------------------------------------------------
 
 classdef WirelessProtocol
     %WIRELESSPROTOCOL Enumeration that lists all wireless protocols that
@@ -12,9 +13,9 @@ classdef WirelessProtocol
         wp_802_11n_mode_2   % N-Standard WLAN with high bitrate
         wp_802_11p          % Standard for car to car communication
         wp_802_15_4_europe  % Standard for wireless sensor networks
- 	%cf. "Underwater Acoustic Modems", Sandra Sendra et al., IEEE Sensors Journal, 2016.
+        
+        % cf. "Underwater Acoustic Modems", Sandra Sendra et al., IEEE Sensors Journal, 2016.
         underwater_mako_modem   % 240 bits/s bitrate
         underwater_marlin_modem % 480 bits/s bitrate
     end
 end
-

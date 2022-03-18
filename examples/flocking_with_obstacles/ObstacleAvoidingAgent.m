@@ -1,7 +1,8 @@
-% This file is part of a library for simulation of multi-agent systems
-% developed at the Institute of Control Systems at TUHH.
-%
-% Original Authors: Christian Hespe <christian.hespe@tuhh.de>
+%---------------------------------------------------------------------------------------------------
+% Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved.
+% Licensed under the GPLv3. See LICENSE in the project root for license information.
+% Author(s): Christian Hespe
+%---------------------------------------------------------------------------------------------------
 
 classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
     %OBSTACLEAVOIDINGAGENT Examplary implementation of a flocking protocol
@@ -35,12 +36,12 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
     end
     
     properties(GetAccess = public, SetAccess = private)
-        q_gamma        % Position of the gamma agent
-        p_gamma        % Velocity of the gamma agent
+        q_gamma   % Position of the gamma agent
+        p_gamma   % Velocity of the gamma agent
     end
     
     properties(GetAccess = public, SetAccess = immutable)
-        obstacles      % list of sphere obstacles
+        obstacles % list of sphere obstacles
     end
     
     methods     
@@ -131,4 +132,3 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
         end
     end
 end
-
