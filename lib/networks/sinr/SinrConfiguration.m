@@ -12,13 +12,13 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         agentCount(1,1) {mustBeInteger, mustBePositive, mustBeLessThanOrEqual(agentCount, 1000)} = 5
         
         % Number of slots that are available for the agents to communicate
-        slotCount(1,1) {mustBeInteger, mustBePositive} = 5
+        slotCount(1,1) {mustBeInteger, mustBeFinite, mustBePositive} = 5
         
         % Duration of one sending cycle
         cycleTime(1,1) {mustBeFinite, mustBePositive} = 1
         
         % Size of the data packets [Bit]
-        packetSize(1,1) {mustBeInteger, mustBePositive} = 6 * 64;
+        packetSize(1,1) {mustBeInteger, mustBeFinite, mustBePositive} = 6 * 64;
         
         % Temperature of the environment [K]
         temperature(1,1) {mustBeFinite, mustBePositive} = 293.15 % 20° C
@@ -27,10 +27,13 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         wirelessProtocol(1,1) WirelessProtocol = WirelessProtocol.wp_802_11n_mode_1
         
         % Transmission power [W]
-        power(1,1) {mustBePositive} = 1
+        power(1,1) {mustBeFinite, mustBePositive} = 1
         
         % Path loss coefficient of the transmission
         pathLoss(1,1) {mustBeFinite, mustBeGreaterThanOrEqual(pathLoss, 2)} = 2.0
+        
+        % Parameter of the Nakagami distribution used for the fading model
+        nakagamiParameter(1,1) {mustBeFinite, mustBeGreaterThanOrEqual(nakagamiParameter, 0.5)} = 2.0
         
         % Seeds for the random number generators
         fadingSeed(1,1) uint32 = randi(intmax('uint32'))
@@ -57,4 +60,3 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         end
     end
 end
-

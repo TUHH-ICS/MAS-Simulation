@@ -131,24 +131,24 @@ public:
              * ****/ 
 
                 matlab::data::Array config(inputs[1]);
-                unsigned numberOfAgents = matlabPtr->getProperty(config, u"agentCount")[0];
-                unsigned numberOfSlots  = matlabPtr->getProperty(config, u"slotCount")[0];
-                unsigned dataSize       = matlabPtr->getProperty(config, u"packetSize")[0];
-                unsigned fadingSeed     = matlabPtr->getProperty(config, u"fadingSeed")[0];
-                unsigned slotSeed       = matlabPtr->getProperty(config, u"slotSeed")[0];
-                double   cycleTime      = matlabPtr->getProperty(config, u"cycleTime")[0];
-                double   power          = matlabPtr->getProperty(config, u"power")[0];
-                double   pathLoss       = matlabPtr->getProperty(config, u"pathLoss")[0];
+                unsigned numberOfAgents    = matlabPtr->getProperty(config, u"agentCount")[0];
+                unsigned numberOfSlots     = matlabPtr->getProperty(config, u"slotCount")[0];
+                unsigned dataSize          = matlabPtr->getProperty(config, u"packetSize")[0];
+                unsigned fadingSeed        = matlabPtr->getProperty(config, u"fadingSeed")[0];
+                unsigned slotSeed          = matlabPtr->getProperty(config, u"slotSeed")[0];
+                double   cycleTime         = matlabPtr->getProperty(config, u"cycleTime")[0];
+                double   power             = matlabPtr->getProperty(config, u"power")[0];
+                double   pathLoss          = matlabPtr->getProperty(config, u"pathLoss")[0];
+                double   nakagamiParameter = matlabPtr->getProperty(config, u"nakagamiParameter")[0];
+                double   temperature       = matlabPtr->getProperty(config, u"temperature")[0];
                 
                 // Check if the number of agents is in the valid range
                 if( numberOfAgents < 1 || MAX_AGENTS < numberOfAgents ) {
-                    error("The number of agents must be between 1 and 50");
+                    error("The number of agents must be between 1 and 1000");
                     return;
                 }
 
-                double temperature = matlabPtr->getProperty(config, u"temperature")[0];
                 matlab::data::EnumArray protocol(matlabPtr->getProperty(config, u"wirelessProtocol"));
-                
                 switch(parseProtocol(std::string(protocol[0]))){
                     case WirelessProtocolEnum::wp_802_11n_mode_1:
                         wp = std::unique_ptr<SINR::WirelessProtocolParameters>(new SINR::WirelessProtocol802_11n_mode1(temperature));
@@ -174,8 +174,7 @@ public:
                         error("Unknown wireless protocol!");
                         return;
                 }
-                
-                const double nakagamiParameter = 2.0;                
+                         
                 const double beaconFrequency = 1.0 / cycleTime;
                 const double bitrate = beaconFrequency * dataSize * numberOfSlots;
                 wp->set_bitrate(bitrate);
