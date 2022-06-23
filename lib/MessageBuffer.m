@@ -41,7 +41,7 @@ classdef MessageBuffer < handle
             buffer(capacity) = Message;
             obj.buffer       = buffer;
             
-            % The buffer starts of empty
+            % The buffer starts off empty
             obj.nElements    = 0;
         end
         
