@@ -18,7 +18,6 @@ classdef(Sealed) SimulationManager < handle
     properties(GetAccess = public, SetAccess = private)
         nextAgentCall   % Contains the time when each agent should be called next
         nextNetworkCall % Contains the time when the network should be called next
-        needsUpdate     % Flags for each agent, if it needs to be updated in the network
     end
     
     properties(GetAccess = public, SetAccess = immutable)
@@ -37,7 +36,6 @@ classdef(Sealed) SimulationManager < handle
             agentCount = length(agents);
             obj.nextAgentCall   = zeros(agentCount, 1);
             obj.nextNetworkCall = 0;
-            obj.needsUpdate     = ones(agentCount, 1, 'logical');
         end
         
         function k = estimateSteps(obj, T)
@@ -85,9 +83,6 @@ classdef(Sealed) SimulationManager < handle
                 for agent = obj.agents(obj.nextAgentCall == nextCall)
                     agent.step()
 
-                    % Set update required
-                    obj.needsUpdate(agent.id) = true;
-
                     % Set time for next call to this agent
                     obj.nextAgentCall(agent.id) = t + agent.dT;
                 end
@@ -95,12 +90,11 @@ classdef(Sealed) SimulationManager < handle
 
             % Check if the network is the next to run
             if obj.nextNetworkCall <= nextCall
-                % If required, update the information that the network has
-                % about the agents
-                for agent = obj.agents(obj.needsUpdate)
+                % Update the information that the network has about the
+                % agents
+                for agent = obj.agents
                     obj.network.updateAgent(agent)
                 end
-                obj.needsUpdate(:) = false;
 
                 % Process sent messages in the network
                 recvMessages = obj.network.process();
