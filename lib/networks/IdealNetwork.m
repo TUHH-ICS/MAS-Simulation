@@ -41,12 +41,15 @@ classdef IdealNetwork < MatlabNetwork
             
             sentMessages = obj.sentMessages.takeAll();
             
-            % Exclude the possibility of agents sending to themselves
-            filter = ~eye(length(sentMessages), obj.agentCount, 'logical');
+            % Initialize every message as received by everyone
+            filter = ones([length(sentMessages), obj.agentCount], 'logical');
             
             % Compute the recipients of each message
             for i = 1:length(sentMessages)
                 pos_sender = obj.positions(:, sentMessages(i).sender);
+                
+                % Exclude the possibility of agents sending to themselves
+                filter(i, sentMessages(i).sender) = false;
                 
                 % Calculate the distance from the sender to all agents
                 dist = vecnorm(pos_sender - obj.positions);
