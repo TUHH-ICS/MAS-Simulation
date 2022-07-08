@@ -5,7 +5,7 @@
 %---------------------------------------------------------------------------------------------------
 
 classdef(Abstract) BaseAgent < handle & matlab.mixin.Heterogeneous
-    %BASEAGENT Defines the basic properties of a agent in the simulation
+    %BASEAGENT Defines the basic properties of an agent in the simulation
     %framework.
     %   All specific agent classes must inherit from this abstract class,
     %   as it defines the basis properties, that are required during
