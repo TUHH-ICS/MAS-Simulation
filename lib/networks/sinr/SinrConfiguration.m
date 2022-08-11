@@ -36,6 +36,10 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         % Parameter of the Nakagami distribution used for the fading model
         nakagamiParameter(1,1) {mustBeFinite, mustBeGreaterThanOrEqual(nakagamiParameter, 0.5)} = 2.0
         
+        % If true, simulateneously received packages get drop, otherwise
+        % there is a random choice between all of them.
+        dropCollisions(1,1) {mustBeA(dropCollisions, "logical")} = false
+        
         % Seeds for the random number generators
         fadingSeed(1,1) uint32 = randi(intmax('uint32'))
         slotSeed(1,1) uint32 = randi(intmax('uint32'))

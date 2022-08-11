@@ -141,6 +141,7 @@ public:
                 double   pathLoss          = matlabPtr->getProperty(config, u"pathLoss")[0];
                 double   nakagamiParameter = matlabPtr->getProperty(config, u"nakagamiParameter")[0];
                 double   temperature       = matlabPtr->getProperty(config, u"temperature")[0];
+                bool     dropCollisions    = matlabPtr->getProperty(config, u"dropCollisions")[0];
                 
                 // Check if the number of agents is in the valid range
                 if( numberOfAgents < 1 || MAX_AGENTS < numberOfAgents ) {
@@ -184,7 +185,7 @@ public:
                 memory   = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
 
                 // Create a simulation environment with the correct number of agents
-                pSim = memory->create();
+                pSim = memory->create(dropCollisions);
 
                 break;
             }

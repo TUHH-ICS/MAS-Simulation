@@ -178,9 +178,10 @@ class SimulationEnvironment{
 	    std::vector<BaseAgent*> &m_pAgents;
 	    const double m_samplingTime;
 	    const vec3** m_pAgentPositions;
+	    const bool m_dropCollisions;
 
 	    SimulationEnvironment(){}; 
-	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel);
+	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel, const bool dropCollisions);
 	    ~SimulationEnvironment();
 
 	    void send(const AgentID sendingAgent);
@@ -193,7 +194,7 @@ class SimulationEnvironment{
 }; 
 
 template <class MyData>
-SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel){ 
+SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel, const bool dropCollisions)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel), m_dropCollisions(dropCollisions) { 
  	assert(channel.m_numberOfAgents == m_numberOfAgents);
 	assert(m_pAgents.size() == m_numberOfAgents);
 
@@ -218,10 +219,7 @@ void SimulationEnvironment<MyData>::send(const AgentID sendingAgent){
 template <class MyData>
 int SimulationEnvironment<MyData>::process(){
 	//some flags. Need to be refactored.
-        constexpr bool eachAgentReceivesAtMostOnePacketPerSlot = true;
-	constexpr bool useBernoulliModel = false;
-	// needed only for bernoulli
-	std::default_random_engine* pRandomGenerator = m_channel.m_fading.m_pRandomGenerator;  
+    constexpr bool eachAgentReceivesAtMostOnePacketPerSlot = true;
 
 	//initialize channel
 	m_channel.init();
@@ -302,34 +300,16 @@ int SimulationEnvironment<MyData>::process(){
 				double& P_I = interference;
 				const double  P_S = m_channel.m_fading.m_interferenceInCurrentSlot[id_u][id_v];
 
-
-				if (!useBernoulliModel){
-					// SINR model
-					if (P_S/(P_I + P_N) >= sinrThreshold){
-						if (eachAgentReceivesAtMostOnePacketPerSlot){
-							//register all candidates that exceed the threshold
-							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
-						}
-						else{
-							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
-						} 
-					}
-				}
-				else{ //Bernoulli model
-					const double p = 0.8;
-					const double prob = p/(2.0*static_cast<double>(m_channel.m_dataSentBySlot[k].size()));
-					std::bernoulli_distribution bernoulli(prob);
-					if (static_cast<bool>(bernoulli(*pRandomGenerator))){
-						if (eachAgentReceivesAtMostOnePacketPerSlot){
-							//register all candidates that exceed the threshold
-							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
-						}
-						else{
-
-							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
-						} 
-					} 
-				}
+                // SINR model
+                if (P_S/(P_I + P_N) >= sinrThreshold){
+                    if (eachAgentReceivesAtMostOnePacketPerSlot){
+                        //register all candidates that exceed the threshold
+                        m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
+                    }
+                    else{
+                        m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
+                    } 
+                }
 			}
 			i++;
 		} 
@@ -337,7 +317,9 @@ int SimulationEnvironment<MyData>::process(){
 		// Insure that each agent receives at most one message per slot
 		for (AgentID id_v = 0; id_v < m_numberOfAgents; id_v++){
 			const int chosenPositionReturnValue = m_channel.pick_position_from_currentlyReceivingFromList(id_v);
-			if (chosenPositionReturnValue == -1){
+            const size_t noReceived = m_channel.m_currentlyReceivingFromList[id_v].size();
+            
+			if (chosenPositionReturnValue == -1 || (m_dropCollisions && noReceived >= 2)){
 				//std::cout << "sender ============== -1" << std::endl;
 				continue;
 			}
@@ -387,13 +369,13 @@ class SEMemory{
 		}
                                                                                                                                                                                               
 
-       	SimulationEnvironment<Data>* create(){
+       	SimulationEnvironment<Data>* create(const bool dropCollisions){
             for (unsigned int i = 0; i < m_numberOfAgents; i++){
 				m_dataMemory[i].init({0.0, 0.0, 0.0});
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
 			} 
-			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
+			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel, dropCollisions);
 			return m_simMem;
 		}
 };
