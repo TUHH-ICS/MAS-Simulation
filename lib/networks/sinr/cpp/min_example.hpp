@@ -156,18 +156,18 @@ double bpsk_error_prob(const double packetSize, const double bandwidth, const do
 		 
 		*/
 
-	double bitErrProb = Qfunction(sqrt(bandwidth/bitrate * sinr));
-	double errorProb = pow(bitErrorProb, packetSize);
+	double bitErrProb = TLS::Qfunction(sqrt(bandwidth/bitrate * sinr));
+	double errorProb = pow(bitErrProb, packetSize);
 
 	return errorProb;
 
 
 } 
 
-bool default_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
+bool default_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, const std::default_random_engine* pRandomGenerator){
       return (sinr >= sinrThreshold);
 }
-bool bpsk_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const std::default_random_engine* pRandomGenerator){
+bool bpsk_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, const std::default_random_engine* pRandomGenerator){
       std::bernoulli_distribution bernoulli(bpsk_error_prob(packetSize, bandwidth, bitrate, sinr));
  	
       return static_cast<bool>(bernoulli(*pRandomGenerator));
@@ -346,9 +346,10 @@ int SimulationEnvironment<MyData>::process(){
 
 					// note: choose bpsk_sin_success_function ... a flag still has to be set
 					//
-					const double packetSize = m_channel.m_fading.m_protocol.m_bitrate * m_samplingTime/static_cast<double>(m_numberOfSlots);
+					const double packetSize = m_channel.m_fading.m_protocol.m_bitrate * m_samplingTime/static_cast<double>(m_channel.m_numberOfSlots);
 
-					if default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, pRandomGenerator){
+					if (default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator)){
+//                     if (bpsk_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator)){
 						if (eachAgentReceivesAtMostOnePacketPerSlot){
 							//register all candidates that exceed the threshold
 							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
