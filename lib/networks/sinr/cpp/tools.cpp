@@ -1,6 +1,7 @@
 #include "tools.h"
 #include <iostream>
 #include <assert.h>
+#include <cmath>
 
  /* *****************************************************
  *  tools.cpp
@@ -72,7 +73,70 @@ int faculty(const unsigned int n){
 
 
 
+double erf(double x)
+{
+    /* taken from https://www.johndcook.com/blog/cpp_erf/ */
 
+    // constants
+    double a1 =  0.254829592;
+    double a2 = -0.284496736;
+    double a3 =  1.421413741;
+    double a4 = -1.453152027;
+    double a5 =  1.061405429;
+    double p  =  0.3275911;
 
+    // Save the sign of x
+    int sign = 1;
+    if (x < 0)
+        sign = -1;
+    x = fabs(x);
 
+    // A&S formula 7.1.26
+    // A&S refers to Handbook of Mathematical Functions by Abramowitz and Stegun.
+    double t = 1.0/(1.0 + p*x);
+    double y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+
+    return sign*y;
+}
+
+void testErf()
+{
+    /* taken from https://www.johndcook.com/blog/cpp_erf/ */
+
+    // Select a few input values
+    double x[] = 
+    {
+        -3, 
+        -1, 
+        0.0, 
+        0.5, 
+        2.1 
+    };
+
+    // Output computed by Mathematica
+    // y = Erf[x]
+    double y[] = 
+    { 
+        -0.999977909503, 
+        -0.842700792950, 
+        0.0, 
+        0.520499877813, 
+        0.997020533344 
+    };
+
+    int numTests = sizeof(x)/sizeof(double);
+
+    double maxError = 0.0;
+    for (int i = 0; i < numTests; ++i)     {         
+        double error = fabs(y[i] - erf(x[i]));         
+        if (error > maxError)
+            maxError = error;
+    }
+
+    std::cout << "Maximum error: " << maxError << "\n";
+}  
+
+double Qfunction(const double x){
+	return 0.5 * (1.0 - erf(x/sqrt(2.0)));
+}
 

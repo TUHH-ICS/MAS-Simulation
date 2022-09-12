@@ -4,6 +4,7 @@
 #include <tuple>
 #include <random>
 #include <assert.h>
+#include <cmath>
 #include "fading.h"
 
 /* #######################################################
@@ -143,6 +144,34 @@ template <class TheData>
 unsigned int Agent<TheData>::m_IDcounter; 
 // ################### END class Agent ################### 
 
+double bpsk_error_prob(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
+
+		/* packetSize: in bit
+		   bandwidth: corresponds to 2*B in Goldbsmith, Wireless Communication
+		   bitrate: in bit/s
+		   SINR: Signal to noise plus interference ratio
+
+		   The formula in Goldsmith reads:
+		   	Q(sqrt(2 gamma_b))   [p.174]
+		 
+		*/
+
+	double bitErrProb = Qfunction(sqrt(bandwidth/bitrate * sinr));
+	double errorProb = pow(bitErrorProb, packetSize);
+
+	return errorProb;
+
+
+} 
+
+bool default_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
+      return (sinr >= sinrThreshold);
+}
+bool bpsk_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const std::default_random_engine* pRandomGenerator){
+      std::bernoulli_distribution bernoulli(bpsk_error_prob(packetSize, bandwidth, bitrate, sinr));
+ 	
+      return static_cast<bool>(bernoulli(*pRandomGenerator));
+}
 
 // Simple Agent
 class SomeAgent : public Agent<Data>{
@@ -219,6 +248,9 @@ template <class MyData>
 void SimulationEnvironment<MyData>::send(const AgentID sendingAgent){
 	_send(sendingAgent, m_pAgents[sendingAgent]->m_pData);
 }
+
+
+
 template <class MyData>
 int SimulationEnvironment<MyData>::process(){
 	//some flags. Need to be refactored.
@@ -307,9 +339,16 @@ int SimulationEnvironment<MyData>::process(){
 				const double  P_S = m_channel.m_fading.m_interferenceInCurrentSlot[id_u][id_v];
 
 
+
 				if (!useBernoulliModel){
 					// SINR model
-					if (P_S/(P_I + P_N) >= sinrThreshold){
+					const double sinr = P_S/(P_I + P_N);
+
+					// note: choose bpsk_sin_success_function ... a flag still has to be set
+					//
+					const double packetSize = m_channel.m_fading.m_protocol.m_bitrate * m_samplingTime/static_cast<double>(m_numberOfSlots);
+
+					if default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, pRandomGenerator){
 						if (eachAgentReceivesAtMostOnePacketPerSlot){
 							//register all candidates that exceed the threshold
 							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
