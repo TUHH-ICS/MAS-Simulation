@@ -68,7 +68,15 @@ int faculty(const unsigned int n){
 	return res;
 } 
 
-}//end namespace
+/*
+double Qfunction(const double x){
+	return 0.5 * (1.0 - erf(x/sqrt(2.0)));
+} 
+*/
+
+double qfunction(const double){
+	return 1.0;
+}
 
 
 
@@ -98,6 +106,7 @@ double erf(double x)
 
     return sign*y;
 }
+}//end namespace
 
 void testErf()
 {
@@ -128,7 +137,7 @@ void testErf()
 
     double maxError = 0.0;
     for (int i = 0; i < numTests; ++i)     {         
-        double error = fabs(y[i] - erf(x[i]));         
+        double error = fabs(y[i] - TLS::erf(x[i]));         
         if (error > maxError)
             maxError = error;
     }
@@ -136,7 +145,5 @@ void testErf()
     std::cout << "Maximum error: " << maxError << "\n";
 }  
 
-double Qfunction(const double x){
-	return 0.5 * (1.0 - erf(x/sqrt(2.0)));
-}
+
 
