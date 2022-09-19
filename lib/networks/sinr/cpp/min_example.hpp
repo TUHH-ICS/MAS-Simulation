@@ -210,9 +210,10 @@ class SimulationEnvironment{
 	    const double m_samplingTime;
 	    const vec3** m_pAgentPositions;
 	    const bool m_dropCollisions;
+	    const bool m_bpsk;
 
 	    SimulationEnvironment(){}; 
-	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel, const bool dropCollisions);
+	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel, const bool dropCollisions, const bool bpsk);
 	    ~SimulationEnvironment();
 
 	    void send(const AgentID sendingAgent);
@@ -225,7 +226,7 @@ class SimulationEnvironment{
 }; 
 
 template <class MyData>
-SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel, const bool dropCollisions)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel), m_dropCollisions(dropCollisions) { 
+SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel, const bool dropCollisions, const bool bpsk)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel), m_dropCollisions(dropCollisions), m_bpsk(bpsk) { 
  	assert(channel.m_numberOfAgents == m_numberOfAgents);
 	assert(m_pAgents.size() == m_numberOfAgents);
 
@@ -340,13 +341,17 @@ int SimulationEnvironment<MyData>::process(){
 
 				// SINR model
 				const double sinr = P_S/(P_I + P_N);
-
-				// note: choose bpsk_sin_success_function ... a flag still has to be set
-				//
 				const double packetSize = m_channel.m_fading.m_protocol.m_bitrate * m_samplingTime/static_cast<double>(m_channel.m_numberOfSlots);
+                
+                // Determine transmission success
+                bool received;
+                if (m_bpsk) {
+                    received = bpsk_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator);
+                } else {
+                    received = default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator);
+                }
 
-				//if (default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator)){
-				if (bpsk_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator)){
+				if (received){
 					if (eachAgentReceivesAtMostOnePacketPerSlot){
 						//register all candidates that exceed the threshold
 						m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
@@ -414,13 +419,13 @@ class SEMemory{
 		}
                                                                                                                                                                                               
 
-       	SimulationEnvironment<Data>* create(const bool dropCollisions){
+       	SimulationEnvironment<Data>* create(const bool dropCollisions, const bool bpsk){
             for (unsigned int i = 0; i < m_numberOfAgents; i++){
 				m_dataMemory[i].init({0.0, 0.0, 0.0});
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
 			} 
-			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel, dropCollisions);
+			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel, dropCollisions, bpsk);
 			return m_simMem;
 		}
 };

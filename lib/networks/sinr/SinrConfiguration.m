@@ -40,6 +40,10 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         % there is a random choice between all of them.
         dropCollisions(1,1) {mustBeA(dropCollisions, "logical")} = false
         
+        % If true, a BPSK model is used for the modulation scheme,
+        % otherwise the simulation assumes idealized transmission.
+        bpsk(1,1) {mustBeA(bpsk, "logical")} = true
+        
         % Seeds for the random number generators
         fadingSeed(1,1) uint32 = randi(intmax('uint32'))
         slotSeed(1,1) uint32 = randi(intmax('uint32'))
