@@ -133,7 +133,8 @@ T my_build_reduced_index(const T& low, const T& mid1, const T& mid2, const T& hi
 	return theInd - pos;
 }
      
+double qfunction(const double x);
+double erf(double x);
 
 
 }//end namespace TLS
-
