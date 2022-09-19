@@ -146,13 +146,12 @@ classdef SinrNetwork < BaseNetwork
                     senders = [messages.sender];
                     
                     for i = 1:obj.agentCount
-                        % Call into the C++ library to check which messages where
+                        % Call into the C++ library to check which messages were
                         % received by agent i in which slot.
                         %
                         % Each row of vec represents a received messages. The first
                         % column contains the id of the sender, the second column
-                        % the slot in which the message was received. At the
-                        % moment, the slot information is ignored.
+                        % the slot in which the message was received.
                         vec = callSinrNetwork('updateMatlabAgent', i);
 
                         % Collect all received messages based on the sender

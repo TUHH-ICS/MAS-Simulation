@@ -38,11 +38,11 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         
         % If true, simulateneously received packages get drop, otherwise
         % there is a random choice between all of them.
-        dropCollisions(1,1) {mustBeA(dropCollisions, "logical")} = false
+        collisions(1,1) CollisionBehaviour = CollisionBehaviour.pickOne
         
         % If true, a BPSK model is used for the modulation scheme,
         % otherwise the simulation assumes idealized transmission.
-        bpsk(1,1) {mustBeA(bpsk, "logical")} = true
+        bpsk(1,1) logical = false
         
         % Seeds for the random number generators
         fadingSeed(1,1) uint32 = randi(intmax('uint32'))
