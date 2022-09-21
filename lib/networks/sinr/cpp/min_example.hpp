@@ -476,25 +476,12 @@ template <class TheData>
 int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(AgentID receiver){
 	size_t len = m_currentlyReceivingFromList[receiver].size();
 
-	/*
 	if (len >= 1){
 		return rand()%len;
 	}	
 	else if (len == 0){
 		return -1;
 	} 
-	else{
-		assert(false);
-	} 
-	*/
-
-	// Throw away packets in case of multiple successes
-	if (len != 1){
-		return -1;
-	}
-	else{
-		return 0;
-	}
 } 
 
 template <class TheData>
