@@ -65,15 +65,17 @@ int faculty(const unsigned int n){
 	return res;
 } 
 
-/*
-double Qfunction(const double x){
+
+double qfunction(const double x){
 	return 0.5 * (1.0 - erf(x/sqrt(2.0)));
 } 
-*/
 
+
+/*
 double qfunction(const double){
 	return 1.0;
 }
+*/
 
 double erf(double x)
 {

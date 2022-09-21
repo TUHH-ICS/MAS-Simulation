@@ -148,7 +148,7 @@ enum CollisionBehaviour {
     PickOne,
 };
 
-double bpsk_error_prob(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
+double bpsk_succ_prob(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
 
     /* packetSize: in bit
        bandwidth: corresponds to 2*B in Goldbsmith, Wireless Communication
@@ -161,9 +161,9 @@ double bpsk_error_prob(const double packetSize, const double bandwidth, const do
     */
 
 	double bitErrProb = TLS::qfunction(sqrt(bandwidth/bitrate * sinr));
-	double errorProb = pow(bitErrProb, packetSize);
+	double succProb = pow(1.0 - bitErrProb, packetSize);
 
-	return errorProb;
+	return succProb;
 } 
 
 bool default_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, std::default_random_engine* pRandomGenerator){
@@ -171,7 +171,7 @@ bool default_sinr_success_function(const double packetSize, const double bandwid
 }
 
 bool bpsk_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, std::default_random_engine* pRandomGenerator){
-      std::bernoulli_distribution bernoulli(bpsk_error_prob(packetSize, bandwidth, bitrate, sinr));
+      std::bernoulli_distribution bernoulli(bpsk_succ_prob(packetSize, bandwidth, bitrate, sinr));
  	
       return static_cast<bool>(bernoulli(*pRandomGenerator));
 }
@@ -476,6 +476,7 @@ template <class TheData>
 int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(AgentID receiver){
 	size_t len = m_currentlyReceivingFromList[receiver].size();
 
+	/*
 	if (len >= 1){
 		return rand()%len;
 	}	
@@ -485,6 +486,15 @@ int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(Agent
 	else{
 		assert(false);
 	} 
+	*/
+
+	// Throw away packets in case of multiple successes
+	if (len != 1){
+		return -1;
+	}
+	else{
+		return 0;
+	}
 } 
 
 template <class TheData>
