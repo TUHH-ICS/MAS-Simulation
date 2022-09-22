@@ -404,7 +404,7 @@ class SEMemory{
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
 			} 
-			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel, collisions, bpsk);
+			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 1.0/m_beaconFreq, m_channel, collisions, bpsk);
 			return m_simMem;
 		}
 };
