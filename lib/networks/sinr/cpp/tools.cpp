@@ -67,7 +67,7 @@ int faculty(const unsigned int n){
 
 
 double qfunction(const double x){
-	return 0.5 * (1.0 - erf(x/sqrt(2.0)));
+	return 0.5 * (1.0 - std::erf(x/sqrt(2.0)));
 } 
 
 }//end namespace
