@@ -88,6 +88,15 @@ private:
         return WirelessProtocolEnum::Unknown;
     }
     
+    CollisionBehaviour parseCollision(std::string name) {
+        if (name == "receiveAll")   return CollisionBehaviour::ReceiveAll;
+        if (name == "dropAll")      return CollisionBehaviour::DropAll;
+        if (name == "pickOne")      return CollisionBehaviour::PickOne;
+        
+        error("Invalid collision behaviour!");
+        return CollisionBehaviour::PickOne;
+    }
+    
     /**
      * Print message in the Matlab command line
      */
@@ -141,6 +150,7 @@ public:
                 double   pathLoss          = matlabPtr->getProperty(config, u"pathLoss")[0];
                 double   nakagamiParameter = matlabPtr->getProperty(config, u"nakagamiParameter")[0];
                 double   temperature       = matlabPtr->getProperty(config, u"temperature")[0];
+                bool     bpsk              = matlabPtr->getProperty(config, u"bpsk")[0];
                 
                 // Check if the number of agents is in the valid range
                 if( numberOfAgents < 1 || MAX_AGENTS < numberOfAgents ) {
@@ -184,7 +194,8 @@ public:
                 memory   = std::unique_ptr<SEMemory<SomeAgent, Data, MAX_AGENTS>>(new SEMemory<SomeAgent, Data, MAX_AGENTS>(numberOfAgents, *fading, numberOfSlots, slotSeed, beaconFrequency));
 
                 // Create a simulation environment with the correct number of agents
-                pSim = memory->create();
+                matlab::data::EnumArray collision(matlabPtr->getProperty(config, u"collisions"));
+                pSim = memory->create(parseCollision(std::string(collision[0])), bpsk);
 
                 break;
             }

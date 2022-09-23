@@ -36,6 +36,15 @@ classdef SinrConfiguration < matlab.mixin.Copyable
         % Parameter of the Nakagami distribution used for the fading model
         nakagamiParameter(1,1) {mustBeFinite, mustBeGreaterThanOrEqual(nakagamiParameter, 0.5)} = 2.0
         
+        % Configures how the library handles packet collistions. Either all
+        % packets are received, none are received or one is picked at
+        % random.
+        collisions(1,1) CollisionBehaviour = CollisionBehaviour.pickOne
+        
+        % If true, a BPSK model is used for the modulation scheme,
+        % otherwise the simulation assumes idealized transmission.
+        bpsk(1,1) logical = false
+        
         % Seeds for the random number generators
         fadingSeed(1,1) uint32 = randi(intmax('uint32'))
         slotSeed(1,1) uint32 = randi(intmax('uint32'))

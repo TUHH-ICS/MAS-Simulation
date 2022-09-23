@@ -11,6 +11,7 @@
 #include <tuple>
 #include <random>
 #include <assert.h>
+#include <cmath>
 #include "fading.h"
 
 // ############## BEGIN: Alias declaration ##############
@@ -27,7 +28,6 @@ class Data{
 		void init(const vec3& pos){
 			m_pos = pos;	
 		}
-
 }; 
 
 // Agent Base class
@@ -139,6 +139,42 @@ template <class TheData>
 unsigned int Agent<TheData>::m_IDcounter; 
 // ################### END class Agent ################### 
 
+/**
+ * Enum for selecting appropriate behaviour in case of message collisions
+ */
+enum CollisionBehaviour {
+    ReceiveAll,
+    DropAll,
+    PickOne,
+};
+
+double bpsk_succ_prob(const double packetSize, const double bandwidth, const double bitrate, const double sinr){
+
+    /* packetSize: in bit
+       bandwidth: corresponds to 2*B in Goldbsmith, Wireless Communication
+       bitrate: in bit/s
+       SINR: Signal to noise plus interference ratio
+
+       The formula in Goldsmith reads:
+        Q(sqrt(2 gamma_b))   [p.174]
+
+    */
+
+	double bitErrProb = TLS::qfunction(sqrt(bandwidth/bitrate * sinr));
+	double succProb = pow(1.0 - bitErrProb, packetSize);
+
+	return succProb;
+} 
+
+bool default_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, std::default_random_engine* pRandomGenerator){
+      return (sinr >= sinrThreshold);
+}
+
+bool bpsk_sinr_success_function(const double packetSize, const double bandwidth, const double bitrate, const double sinr, const double sinrThreshold, std::default_random_engine* pRandomGenerator){
+      std::bernoulli_distribution bernoulli(bpsk_succ_prob(packetSize, bandwidth, bitrate, sinr));
+ 	
+      return static_cast<bool>(bernoulli(*pRandomGenerator));
+}
 
 // Simple Agent
 class SomeAgent : public Agent<Data>{
@@ -178,9 +214,11 @@ class SimulationEnvironment{
 	    std::vector<BaseAgent*> &m_pAgents;
 	    const double m_samplingTime;
 	    const vec3** m_pAgentPositions;
+	    const CollisionBehaviour m_collisions;
+	    const bool m_bpsk;
 
 	    SimulationEnvironment(){}; 
-	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel);
+	    SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& agents, const double samplingTime, Channel& channel, const CollisionBehaviour collisions, const bool bpsk);
 	    ~SimulationEnvironment();
 
 	    void send(const AgentID sendingAgent);
@@ -193,7 +231,7 @@ class SimulationEnvironment{
 }; 
 
 template <class MyData>
-SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel){ 
+SimulationEnvironment<MyData>::SimulationEnvironment(const unsigned int numberOfAgents, std::vector<BaseAgent*>& pAgents, const double samplingTime, Channel& channel, const CollisionBehaviour collisions, const bool bpsk)  : m_numberOfAgents(numberOfAgents), m_pAgents(pAgents), m_samplingTime(samplingTime), m_channel(channel), m_collisions(collisions), m_bpsk(bpsk) { 
  	assert(channel.m_numberOfAgents == m_numberOfAgents);
 	assert(m_pAgents.size() == m_numberOfAgents);
 
@@ -208,20 +246,20 @@ template <class MyData>
 SimulationEnvironment<MyData>::~SimulationEnvironment(){
 	delete[] m_pAgentPositions;
 }
+
 template <class MyData>
 void SimulationEnvironment<MyData>::_send(const AgentID sendingAgent, const MyData& data){
 }
+
 template <class MyData>
 void SimulationEnvironment<MyData>::send(const AgentID sendingAgent){
 	_send(sendingAgent, m_pAgents[sendingAgent]->m_pData);
 }
+
 template <class MyData>
 int SimulationEnvironment<MyData>::process(){
-	//some flags. Need to be refactored.
-        constexpr bool eachAgentReceivesAtMostOnePacketPerSlot = true;
-	constexpr bool useBernoulliModel = false;
-	// needed only for bernoulli
-	std::default_random_engine* pRandomGenerator = m_channel.m_fading.m_pRandomGenerator;  
+	// Extra random number generator
+	std::default_random_engine* pRandomGenerator = m_channel.m_fading.m_pRandomGenerator; 
 
 	//initialize channel
 	m_channel.init();
@@ -270,27 +308,10 @@ int SimulationEnvironment<MyData>::process(){
 				bool agent_vSendingInSlot_k = false;
 				for (AgentID id_l : sendingAgentsInSlot_k){
 					if (id_l == id_u)
-						{continue;}
+						continue;
 					if (id_l == id_v){
-						// ToDo: To be refactored. Transform this adhoc-skip-rubbish into a 
-						// self-explaining flag argument:
-						// on/off: sending nodes can/cannot receive.
-						//
-						// SKIP=true means that the check if the receiving node is sending
-						// is skipped.
-						// Thus: 
-						// 	SKIP=true 	<==>  "sending nodes *can* receive"
-						constexpr bool SKIP = false;
-						
-						if (!SKIP){
-							//regular case
-							agent_vSendingInSlot_k  = true;
-							break;
-						}
-						else{
-							// DEBUGING: SKIP == true
-							continue;
-						}
+                        agent_vSendingInSlot_k  = true;
+                        break;
 					}
 					interference += m_channel.m_fading.m_interferenceInCurrentSlot[id_l][id_v];
 				}
@@ -302,54 +323,43 @@ int SimulationEnvironment<MyData>::process(){
 				double& P_I = interference;
 				const double  P_S = m_channel.m_fading.m_interferenceInCurrentSlot[id_u][id_v];
 
+				// SINR model
+				const double sinr = P_S/(P_I + P_N);
+				const double packetSize = m_channel.m_fading.m_protocol.m_bitrate * m_samplingTime/static_cast<double>(m_channel.m_numberOfSlots);
+                
+                // Determine transmission success
+                bool received;
+                if (m_bpsk) {
+                    received = bpsk_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator);
+                } else {
+                    received = default_sinr_success_function(packetSize, m_channel.m_fading.m_protocol.m_channelBandwidth, m_channel.m_fading.m_protocol.m_bitrate, sinr, sinrThreshold, pRandomGenerator);
+                }
 
-				if (!useBernoulliModel){
-					// SINR model
-					if (P_S/(P_I + P_N) >= sinrThreshold){
-						if (eachAgentReceivesAtMostOnePacketPerSlot){
-							//register all candidates that exceed the threshold
-							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
-						}
-						else{
-							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
-						} 
+				if (received){
+					if (m_collisions != CollisionBehaviour::ReceiveAll){
+						//register all candidates that exceed the threshold
+						m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
 					}
-				}
-				else{ //Bernoulli model
-					const double p = 0.8;
-					const double prob = p/(2.0*static_cast<double>(m_channel.m_dataSentBySlot[k].size()));
-					std::bernoulli_distribution bernoulli(prob);
-					if (static_cast<bool>(bernoulli(*pRandomGenerator))){
-						if (eachAgentReceivesAtMostOnePacketPerSlot){
-							//register all candidates that exceed the threshold
-							m_channel.m_currentlyReceivingFromList[id_v].push_back(std::make_tuple(id_u, &(std::get<1>(u))));
-						}
-						else{
-
-							m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
-						} 
+					else{
+						m_pAgents[id_v]->receive_data(id_u, k, std::get<1>(u));
 					} 
 				}
 			}
 			i++;
 		} 
 
-		// Insure that each agent receives at most one message per slot
-		for (AgentID id_v = 0; id_v < m_numberOfAgents; id_v++){
+		// if requested, ensure that each agent receives at most one message per slot
+		for (AgentID id_v = 0; m_collisions != CollisionBehaviour::ReceiveAll && id_v < m_numberOfAgents; id_v++){
 			const int chosenPositionReturnValue = m_channel.pick_position_from_currentlyReceivingFromList(id_v);
-			if (chosenPositionReturnValue == -1){
-				//std::cout << "sender ============== -1" << std::endl;
-				continue;
-			}
-			else{
-				if (eachAgentReceivesAtMostOnePacketPerSlot){
-					const unsigned int chosenPosition = static_cast<const unsigned int>(chosenPositionReturnValue);	
-					//receving:
-					AgentID chosenSender = std::get<0>(m_channel.m_currentlyReceivingFromList[id_v].at(chosenPosition));
+            const size_t noReceived = m_channel.m_currentlyReceivingFromList[id_v].size();
+            
+			if (!(chosenPositionReturnValue == -1 || (m_collisions == CollisionBehaviour::DropAll && noReceived >= 2))){
+				const unsigned int chosenPosition = static_cast<const unsigned int>(chosenPositionReturnValue);	
+				//receving:
+				AgentID chosenSender = std::get<0>(m_channel.m_currentlyReceivingFromList[id_v].at(chosenPosition));
 
-					MyData* data  = std::get<1>(m_channel.m_currentlyReceivingFromList[id_v].at(chosenPosition));
-					m_pAgents[id_v]->receive_data(chosenSender, k, *data);
-				}
+				MyData* data  = std::get<1>(m_channel.m_currentlyReceivingFromList[id_v].at(chosenPosition));
+				m_pAgents[id_v]->receive_data(chosenSender, k, *data);
 			} 	
 		}
 
@@ -361,6 +371,7 @@ int SimulationEnvironment<MyData>::process(){
 	
 	return 0;
 }
+
 // Add compatibility check of MyAgent and MyData
 template <class MyAgent, class MyData, int maxNumberOfAgents>
 class SEMemory{
@@ -387,13 +398,13 @@ class SEMemory{
 		}
                                                                                                                                                                                               
 
-       	SimulationEnvironment<Data>* create(){
+       	SimulationEnvironment<Data>* create(const CollisionBehaviour collisions, const bool bpsk){
             for (unsigned int i = 0; i < m_numberOfAgents; i++){
 				m_dataMemory[i].init({0.0, 0.0, 0.0});
 				m_agentMemory[i].init(&(m_dataMemory[i]), static_cast<unsigned int>(m_numberOfAgents), m_beaconFreq);
 				m_pAgents.push_back(&(m_agentMemory[i]));
 			} 
-			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 0.0, m_channel);
+			m_simMem = new SimulationEnvironment<MyData>(m_numberOfAgents, m_pAgents, 1.0/m_beaconFreq, m_channel, collisions, bpsk);
 			return m_simMem;
 		}
 };
@@ -452,13 +463,15 @@ void NetworkChannel<TheData>::init(){
 	for (SlotNumber k = 0; k <  m_numberOfSlots; k++){
 		m_dataSentBySlot[k].clear();
 	} 
-} 
+}
+
 template <class TheData>
 void NetworkChannel<TheData>::reset_currently_receiving_List(){
 	for (AgentID i = 0; i < m_numberOfAgents; i++){
 		m_currentlyReceivingFromList[i].clear();
 	}
-} 
+}
+
 template <class TheData>
 int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(AgentID receiver){
 	size_t len = m_currentlyReceivingFromList[receiver].size();
@@ -469,11 +482,7 @@ int NetworkChannel<TheData>::pick_position_from_currentlyReceivingFromList(Agent
 	else if (len == 0){
 		return -1;
 	} 
-	else{
-		assert(false);
-	} 
 } 
-
 
 template <class TheData>
 SlotNumber NetworkChannel<TheData>::sample_slot(){
@@ -499,7 +508,4 @@ std::vector<AgentID> NetworkChannel<TheData>::get_sending_agents_by_slot(SlotNum
 	return ret;
 
 } 
-
-
 // ################### END class NetworkChannel ###################
- 

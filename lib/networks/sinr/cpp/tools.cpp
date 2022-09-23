@@ -8,7 +8,8 @@
 #include "tools.h"
 #include <iostream>
 #include <assert.h>
- 
+#include <cmath>
+
 namespace TLS{
 
 double vec3_squared_dist(const vec3& a, const vec3& b){
@@ -64,12 +65,10 @@ int faculty(const unsigned int n){
 	return res;
 } 
 
+
+double qfunction(const double x){
+	return 0.5 * (1.0 - std::erf(x/sqrt(2.0)));
+} 
+
 }//end namespace
-
-
-
-
-
-
-
 
