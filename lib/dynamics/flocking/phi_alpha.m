@@ -21,7 +21,7 @@ if nargin <= 4
 end
 
 %% Calculate phi
-c     = (a-b) / sqrt(4*a*b);
+c     = abs(a-b) / sqrt(4*a*b);
 off   = z + c - da;
 
 sigma = off ./ sqrt(1 + off.^2);
