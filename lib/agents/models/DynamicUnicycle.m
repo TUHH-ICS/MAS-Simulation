@@ -7,8 +7,6 @@
 classdef DynamicUnicycle < DynamicAgent
     %DYNAMICUNICYCLE Class that implements the nonlinear dynamics of a
     %dynamic unicycle.
-    %   The continuous-time dynamics are discretized using a Euler
-    %   disretization.
     %   state vector: x = [xi; yi; psi; ub; dpsi]
     %       xi,yi   :   position in inertial coordinate frame
     %       psi     :   rotation about z-axis
@@ -42,7 +40,7 @@ classdef DynamicUnicycle < DynamicAgent
     end
     
     methods
-        function obj = DynamicUnicycle(id, dT, M, Iz, initialPos, initialVel, initialAtt, initialAngVel)
+        function obj = DynamicUnicycle(id, dT, M, Iz, initialPos, initialAtt, initialVel, initialAngVel, varargin)
             %DYNAMICUNICYCLE Construct an instance of this class
             %   Sets up the correct unicycle dynamics and initializes the
             %   unicycle with the given position.
@@ -52,22 +50,34 @@ classdef DynamicUnicycle < DynamicAgent
             %   M               Mass of the unicycle
             %   Iz              Rotational moment of inertia around z axis
             %   initialPos      Initial position of the agent [xi; yi]
-            %   initialVel      Initial velocity of the agent [ub]
             %   initialAtt      Initial attitude of the agent [psi]
-            %   initalAngVel    Initial angular velocity of the agent [dpsi] 
+            %   initialVel      (optional) Initial velocity of the agent [ub]
+            %   initalAngVel    (optional) Initial angular velocity of the agent [dpsi] 
                         
-            % Initialize discrete-time dynamics. The discrete-time model is
-            % calculated by a Euler discretization.
+            % The state can be initialized with either position and
+            % attitude or complete initial state.
             % state vector: x = [xi; yi; psi; ub; dpsi]
-            x0 = [initialPos; initialAtt; initialVel; initialAngVel];
+            if nargin == 6
+                x0 = [initialPos; initialAtt; 0; 0];
+            else
+                x0 = [initialPos; initialAtt; initialVel; initialAngVel];
+            end
             f  = @(t, x, u) DynamicUnicycle.odeFun(t, x, u, M, Iz);
-            fd = nonlinearDiscretization(f, dT, 'euler');
+            fd = nonlinearDiscretization(f, dT);
             dynamics = DiscreteNonlinearDynamics(fd, [], x0);
             
             % Create object with given parameters
             obj@DynamicAgent(id, dT, dynamics);
             obj.M  = M;
             obj.Iz = Iz;
+        end
+
+        function [posHandle, velHandle] = getStateWithHandle(obj, handleLength)
+            %GETSTATEWITHHANDLE Calculate state for unicycle with handle in
+            %inertial coordinates
+            posHandle = obj.state(1:2) + handleLength*[cos(obj.state(3)); sin(obj.state(3))];
+            velHandle = [obj.state(4) * cos(obj.state(3)) - obj.state(5) * handleLength * sin(obj.state(3));
+                         obj.state(4) * sin(obj.state(3)) + obj.state(5) * handleLength * cos(obj.state(3))];
         end
         
         function value = get.position(obj)
@@ -112,21 +122,12 @@ classdef DynamicUnicycle < DynamicAgent
     methods(Static, Sealed, Access = private)
         function xdot = odeFun(~, x, u, M, Iz)
             %ODEFUN ODE representation of a dynamic unicycle
-
             xdot    = zeros(size(x));
             xdot(1) = x(4) * cos(x(3));
             xdot(2) = x(4) * sin(x(3));
             xdot(3) = x(5);
             xdot(4) = u(1) / M;
             xdot(5) = u(2) / Iz;
-        end
-        
-        function [posHandle, velHandle] = getStateWithHandle(obj, handleLength)
-            %GETSTATEWITHHANDLE Calculate state for unicycle with handle in
-            %inertial coordinates
-            posHandle = obj.state(1:2) + handleLength*[cos(obj.state(3)); sin(obj.state(3))];
-            velHandle(3:4) = [obj.state(4) * cos(obj.state(3)) - obj.state(5) * handleLength * sin(obj.state(3));
-                              obj.state(4) * sin(obj.state(3)) + obj.state(5) * handleLength * cos(obj.state(3))];
         end
     end
 end
