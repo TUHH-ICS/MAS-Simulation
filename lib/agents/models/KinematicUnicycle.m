@@ -1,27 +1,33 @@
 %---------------------------------------------------------------------------------------------------
 % Copyright (c) Institute of Control Systems, Hamburg University of Technology. All rights reserved.
 % Licensed under the GPLv3. See LICENSE in the project root for license information.
-% Author(s): Christian Hespe
+% Author(s): Christian Hespe, Philipp Hastedt
 %---------------------------------------------------------------------------------------------------
 
 classdef KinematicUnicycle < DynamicAgent
     %KINEMATICNICYCLE Class that implements the nonlinear dynamics of a
-    %kinematic unicycle with handle.
-    %   The continuous-time dynamics are discretized using a Euler
-    %   disretization.
-    
-    properties(GetAccess = public, SetAccess = immutable)
-        d   % Length of the handle
-    end
+    %kinematic unicycle.
+    %   state vector: x = [xi; yi; psi]
+    %       xi,yi   :   position in inertial coordinate frame
+    %       psi     :   rotation about z-axis
+    %   inputs: u = [F; tau]
+    %       ub       :   velocity in x-direction in body coordinate frame
+    %       dpsi     :   angular velocity
+    %   dynamics:
+    %       xdot(1) = u(1) * cos(x(3))
+    %       xdot(2) = u(1) * sin(x(3))
+    %       xdot(3) = u(2)
     
     % These properties have to be redefined from the superclass BaseAgent
     properties(Dependent, GetAccess = public, SetAccess = private)
-        position % Current position of the unicycle
-        velocity % Current velocity of the unicycle
+        position        % Current position of the unicycle
+        velocity        % Current velocity of the unicycle in inertial coordinates
+        velocityBody    % Current velocity of the unicycle in body coordinates
+        attitude        % Current attitude of the unicycle
     end
     
     methods
-        function obj = KinematicUnicycle(id, dT, d, initialPos)
+        function obj = KinematicUnicycle(id, dT, initialPos, initialAtt)
             %KINEMATICUNICYCLE Construct an instance of this class
             %   Sets up the correct unicycle dynamics and initializes the
             %   unicycle with the given position.
@@ -29,17 +35,26 @@ classdef KinematicUnicycle < DynamicAgent
             %   id          Id of the agent in the network
             %   dT          Desired sampling time
             %   d           Length of the handle
-            %   initialPos  Initial position of the agent
+            %   initialPos  Initial position of the agent [xi; yi]
+            %   initialAtt  Initial attitude of the agent [psi]
                         
             % Initialize discrete-time dynamics. The discrete-time model is
             % calculated by a Euler discretization.
-            x0 = [ initialPos; 0];
-            f  = @(t, x, u) KinematicUnicycle.odeFun(t, x, u, d);
-            fd = nonlinearDiscretization(f, dT, 'euler');
+            x0 = [ initialPos; initialAtt];
+            f  = @(t, x, u) KinematicUnicycle.odeFun(t, x, u);
+            fd = nonlinearDiscretization(f, dT);
             dynamics = DiscreteNonlinearDynamics(fd, [], x0);
             
+            % Create object with given parameters
             obj@DynamicAgent(id, dT, dynamics);
-            obj.d  = d;
+        end
+        
+        function [posHandle, velHandle] = getStateWithHandle(obj, handleLength)
+            %GETSTATEWITHHANDLE Calculate state for unicycle with handle in
+            %inertial coordinates
+            posHandle = obj.state(1:2) + handleLength*[cos(obj.state(3)); sin(obj.state(3))];
+            velHandle = [obj.u(1) * cos(obj.state(3)) - obj.u(2) * handleLength * sin(obj.state(3))
+                         obj.u(1) * sin(obj.state(3)) + obj.u(2) * handleLength * cos(obj.state(3))];
         end
         
         function value = get.position(obj)
@@ -54,24 +69,36 @@ classdef KinematicUnicycle < DynamicAgent
         function value = get.velocity(obj)
             %GET.VELOCITY Implementation of the dependent velocity
             %property.
-            %   This property should return the velocity vector, and not
-            %   just the magnitude of the velocity. Therefore, we construct
-            %   a unit vector in the current direction of the unicycle and
-            %   multiply it with the speed.
-            
+            %   This property returns the velocity vector in inertial
+            %   coordinates   
             phi   = obj.state(3);
             value = obj.u(1) * [ cos(phi); sin(phi) ];
-        end 
+        end
+        
+        function value = get.velocityBody(obj)
+            %GET.VELOCITYBODY Implementation of the dependent velocityBody
+            %property.
+            %   This property returns the velocity vector in body
+            %   coordinates
+            value = [obj.u(1); 0];
+        end
+        
+        function value = get.attitude(obj)
+            %GET.ATTITUDE Implementation of the dependent attitude 
+            %property.
+            %   This property returns the attitude
+            value = obj.state(3);
+        end
     end
     
     methods(Static, Sealed, Access = private)
-        function xdot = odeFun(~, x, u, d)
+        function xdot = odeFun(~, x, u)
             %ODEFUN ODE representation of a kinematic unicycle with handle
 
             xdot    = zeros(size(x));
-            xdot(1) = u(1) * cos(x(3)) - u(2) * d * sin(x(3)); % qx
-            xdot(2) = u(1) * sin(x(3)) + u(2) * d * cos(x(3)); % qy
-            xdot(3) = u(2);                                    % phi
+            xdot(1) = u(1) * cos(x(3)); % xi
+            xdot(2) = u(1) * sin(x(3)); % yi
+            xdot(3) = u(2);             % psi
         end
     end
 end
