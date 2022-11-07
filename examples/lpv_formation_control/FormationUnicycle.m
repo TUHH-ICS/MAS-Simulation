@@ -27,6 +27,10 @@ classdef FormationUnicycle < DynamicUnicycle
         controller % Dynamic output-feedback controller
     end
     
+    properties
+       d; % handle length
+    end
+    
     methods
         function obj = FormationUnicycle(id, initialPos, reference)
             %FORMATIONUNICYCLE Construct an instance of this class
@@ -35,7 +39,10 @@ classdef FormationUnicycle < DynamicUnicycle
             
             % Load data from synthesis script
             data = load('unicycle_controller');
-            obj@DynamicUnicycle(id, data.Ts, data.d, data.m, data.Iz, initialPos);
+            obj@DynamicUnicycle(id, data.Ts, data.m, data.Iz, initialPos, 0);
+            
+            % Set model parameter
+            obj.d = data.d;
             
             % Build controller
             A = @(rho) data.Ak0 + rho * data.Ak1;
@@ -80,7 +87,7 @@ classdef FormationUnicycle < DynamicUnicycle
             end
             
             % Extract state information from the unicycle model
-            phi   = obj.state(4);
+            phi   = obj.state(3);
             omega = obj.state(5);
 
             % For the controller synthesis, we used a rotated frame of
@@ -93,7 +100,8 @@ classdef FormationUnicycle < DynamicUnicycle
             rho = obj.d * omega;
             
             % Calculate local tracking error of the unicycle
-            e = obj.consens - obj.position;
+            [handlePosition, ~] = obj.getStateWithHandle(obj.d);
+            e = obj.consens - handlePosition;
             
             % Evaluate controller equation
             u = obj.controller.step(rot * e, rho);
