@@ -34,7 +34,6 @@ classdef KinematicUnicycle < DynamicAgent
             %
             %   id          Id of the agent in the network
             %   dT          Desired sampling time
-            %   d           Length of the handle
             %   initialPos  Initial position of the agent [xi; yi]
             %   initialAtt  Initial attitude of the agent [psi]
                         
@@ -52,9 +51,10 @@ classdef KinematicUnicycle < DynamicAgent
         function [posHandle, velHandle] = getStateWithHandle(obj, handleLength)
             %GETSTATEWITHHANDLE Calculate state for unicycle with handle in
             %inertial coordinates
-            posHandle = obj.state(1:2) + handleLength*[cos(obj.state(3)); sin(obj.state(3))];
-            velHandle = [obj.u(1) * cos(obj.state(3)) - obj.u(2) * handleLength * sin(obj.state(3))
-                         obj.u(1) * sin(obj.state(3)) + obj.u(2) * handleLength * cos(obj.state(3))];
+            psi = obj.attitude;
+            posHandle = obj.position + handleLength * [cos(psi); sin(psi)];
+            velHandle = [obj.u(1) * cos(psi) - obj.u(2) * handleLength * sin(psi)
+                         obj.u(1) * sin(psi) + obj.u(2) * handleLength * cos(psi)];
         end
         
         function value = get.position(obj)
@@ -71,8 +71,8 @@ classdef KinematicUnicycle < DynamicAgent
             %property.
             %   This property returns the velocity vector in inertial
             %   coordinates   
-            phi   = obj.state(3);
-            value = obj.u(1) * [ cos(phi); sin(phi) ];
+            psi   = obj.attitude;
+            value = obj.u(1) * [ cos(psi); sin(psi) ];
         end
         
         function value = get.velocityBody(obj)

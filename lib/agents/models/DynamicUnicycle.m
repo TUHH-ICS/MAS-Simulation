@@ -75,9 +75,10 @@ classdef DynamicUnicycle < DynamicAgent
         function [posHandle, velHandle] = getStateWithHandle(obj, handleLength)
             %GETSTATEWITHHANDLE Calculate state for unicycle with handle in
             %inertial coordinates
-            posHandle = obj.state(1:2) + handleLength*[cos(obj.state(3)); sin(obj.state(3))];
-            velHandle = [obj.state(4) * cos(obj.state(3)) - obj.state(5) * handleLength * sin(obj.state(3));
-                         obj.state(4) * sin(obj.state(3)) + obj.state(5) * handleLength * cos(obj.state(3))];
+            psi = obj.attitude;
+            posHandle = obj.position + handleLength * [cos(psi); sin(psi)];
+            velHandle = [obj.velocityBody(1) * cos(psi) - obj.angularVelocity * handleLength * sin(psi);
+                         obj.velocityBody(1) * sin(psi) + obj.angularVelocity * handleLength * cos(psi)];
         end
         
         function value = get.position(obj)
@@ -93,7 +94,8 @@ classdef DynamicUnicycle < DynamicAgent
             %property.
             %   This property returns the velocity vector in inertial
             %   coordinates
-            value = obj.state(4)*[cos(obj.state(3)); sin(obj.state(3))];
+            psi = obj.attitude;
+            value = obj.state(4)*[cos(psi); sin(psi)];
         end
         
         function value = get.velocityBody(obj)
