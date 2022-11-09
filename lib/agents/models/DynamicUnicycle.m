@@ -40,7 +40,7 @@ classdef DynamicUnicycle < DynamicAgent
     end
     
     methods
-        function obj = DynamicUnicycle(id, dT, M, Iz, initialPos, initialAtt, initialVel, initialAngVel, varargin)
+        function obj = DynamicUnicycle(id, dT, M, Iz, initialPos, initialAtt, initialVel, initialAngVel)
             %DYNAMICUNICYCLE Construct an instance of this class
             %   Sets up the correct unicycle dynamics and initializes the
             %   unicycle with the given position.
