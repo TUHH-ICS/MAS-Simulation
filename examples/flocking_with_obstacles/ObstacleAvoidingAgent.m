@@ -126,8 +126,8 @@ classdef ObstacleAvoidingAgent < DoubleIntegratorAgent
             % back to double precision to avoid converting all values of
             % the simulation to half precision floating point values.
             data = struct;
-            data.position = double(half(obj.position));
-            data.velocity = double(half(obj.velocity));
+            data.position = obj.position;
+            data.velocity = obj.velocity;
             obj.send(data)
         end
     end

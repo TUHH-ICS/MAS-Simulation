@@ -29,8 +29,7 @@ classdef FormationQuadrotor < LinearisedQuadrocopter
             obj@LinearisedQuadrocopter(id, data.Ts, data.m, initialPos, initialVel);
             
             % Assemble controller
-            [Ad, Bd, Cd, Dd] = ssdata(data.K);
-            obj.controller = DiscreteLtiDynamics(Ad, Bd, Cd, Dd);
+            obj.controller = DiscreteLtiDynamics(data.Ad, data.Bd, data.Cd, data.Dd);
                 
             % Set the formation reference if one is given to the agent
             if nargin <= 2
