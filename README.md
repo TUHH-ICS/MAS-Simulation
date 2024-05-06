@@ -2,6 +2,8 @@
 
 A library to simulate wirelessly interconnection multi-agent systems with stochastic network effects, e.g. information dropouts.
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11118666.svg)](https://doi.org/10.5281/zenodo.11118666)
+
 ## Basic Structure
 
 The base of this simulation tool are the [`BaseAgent`](lib/agents/BaseAgent.m) and [`BaseNetwork`](lib/networks/BaseNetwork.m) classes.
