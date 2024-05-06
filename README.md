@@ -1,4 +1,6 @@
-# Multi-Agent System Simulation Library
+# WiMAS - **Wi**reless **M**ulti-**A**gent **S**imulation Library
+
+A library to simulate wirelessly interconnection multi-agent systems with stochastic network effects, e.g. information dropouts.
 
 ## Basic Structure
 
